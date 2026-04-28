@@ -1,0 +1,85 @@
+"""Stop hook entrypoint. Invoked by Claude Code at session end.
+
+Reads a JSON payload on stdin, builds a structural breadcrumb, and pushes
+it to claude-journal. Always exits 0 so it never blocks the user.
+
+Phase 1 pushes structural breadcrumbs only — the central nightly routine
+runs the LLM-driven consolidation. Per-turn augmentation here would burn
+subscription quota since Stop fires on every assistant turn, not just
+session end.
+"""
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+# Self-locate the project root so `tools.journal.X` imports work regardless of
+# how Claude Code invokes this script (no PYTHONPATH or cwd assumed).
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from tools.journal.breadcrumb import Breadcrumb
+from tools.journal.extract import extract_structural
+from tools.journal.paths import (
+    buffer_path,
+    journal_repo_path,
+    read_device_name,
+)
+from tools.journal.push import push_breadcrumb
+
+
+def _read_payload() -> dict:
+    return json.loads(sys.stdin.read())
+
+
+def _build_breadcrumb(payload: dict, device: str) -> Breadcrumb:
+    structural = extract_structural(
+        session_id=payload["session_id"],
+        device=device,
+        project_dir=payload.get("cwd", str(Path.cwd())),
+        transcript_path=Path(payload["transcript_path"]),
+    )
+    started = structural["started_at"] or datetime.now(timezone.utc)
+    ended = structural["ended_at"] or datetime.now(timezone.utc)
+    return Breadcrumb(
+        session_id=structural["session_id"],
+        device=structural["device"],
+        project=structural["project"],
+        started_at=started,
+        ended_at=ended,
+        files_touched=structural["files_touched"],
+        skills_invoked=structural["skills_invoked"],
+        first_prompt=structural["first_prompt"],
+    )
+
+
+def _log_error(message: str) -> None:
+    try:
+        log = Path.home() / ".claude" / "journal-buffer.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.now(timezone.utc).isoformat()}] {message}\n")
+    except Exception:
+        pass
+
+
+def main() -> int:
+    try:
+        payload = _read_payload()
+        device = read_device_name()
+        bc = _build_breadcrumb(payload, device)
+        date_str = bc.started_at.strftime("%Y-%m-%d")
+        push_breadcrumb(
+            breadcrumb=bc.to_dict(),
+            journal_repo=journal_repo_path(),
+            buffer_path=buffer_path(),
+            date_str=date_str,
+        )
+    except Exception as exc:
+        _log_error(f"on_stop error: {exc!r}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,124 @@
+"""First-time per-device setup for the journal pipeline.
+
+Run once per device:
+
+    scripts/init-journal-device.sh <device-name>
+
+What it does:
+- Clones the claude-journal repo to ~/claude-journal if missing.
+- Records the device name to ~/.claude/journal/device-name.
+- Symlinks the project's hook entrypoints into ~/.claude/hooks/.
+- Registers the hooks under Stop and SessionStart in ~/.claude/settings.json
+  (idempotent — safe to re-run).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _hook_command(python_bin: Path, hook_path: Path) -> str:
+    """Compose the shell command Claude Code will run for a hook.
+
+    Uses an explicit python interpreter so the hook isn't required to be
+    executable or have a shebang, and so it always runs against the project's
+    venv."""
+    return f"{python_bin} {hook_path}"
+
+
+def register_hooks_in_settings(
+    *,
+    settings_path: Path,
+    on_stop_command: str,
+    on_start_command: str,
+) -> None:
+    """Insert the journal hooks into Claude Code's settings.json idempotently.
+
+    Preserves any unrelated content (other settings keys, other hooks).
+    """
+    if settings_path.exists():
+        data = json.loads(settings_path.read_text())
+    else:
+        data = {}
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    hooks = data.setdefault("hooks", {})
+    for event, command in (("Stop", on_stop_command), ("SessionStart", on_start_command)):
+        groups = hooks.setdefault(event, [])
+        if not groups:
+            groups.append({"hooks": []})
+        existing_cmds = {h.get("command") for g in groups for h in g.get("hooks", [])}
+        if command in existing_cmds:
+            continue
+        groups[0].setdefault("hooks", []).append(
+            {"type": "command", "command": command}
+        )
+
+    settings_path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def _ensure_journal_clone(repo_url: str, target: Path) -> None:
+    if target.exists() and (target / ".git").exists():
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "clone", repo_url, str(target)], check=True)
+
+
+def _write_device_name(device: str) -> None:
+    p = Path.home() / ".claude" / "journal" / "device-name"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(device + "\n")
+
+
+def _symlink(src: Path, dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.is_symlink() or dst.exists():
+        dst.unlink()
+    dst.symlink_to(src)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Initialize this device for the journal pipeline."
+    )
+    parser.add_argument(
+        "device",
+        help="Stable name for this device (e.g., laptop, workstation).",
+    )
+    parser.add_argument(
+        "--repo-url",
+        default="git@github.com:askenter/claude-journal.git",
+        help="claude-journal git URL.",
+    )
+    parser.add_argument(
+        "--journal-path",
+        default=str(Path.home() / "claude-journal"),
+        help="Local path for the claude-journal clone.",
+    )
+    args = parser.parse_args(argv)
+
+    project_root = Path(__file__).resolve().parents[2]
+    on_stop_src = project_root / "tools" / "journal" / "hooks" / "on_stop.py"
+    on_start_src = project_root / "tools" / "journal" / "hooks" / "on_start.py"
+    on_stop_dst = Path.home() / ".claude" / "hooks" / "journal-on-stop.py"
+    on_start_dst = Path.home() / ".claude" / "hooks" / "journal-on-start.py"
+    venv_python = project_root / "venv" / "bin" / "python"
+
+    _ensure_journal_clone(args.repo_url, Path(args.journal_path))
+    _write_device_name(args.device)
+    _symlink(on_stop_src, on_stop_dst)
+    _symlink(on_start_src, on_start_dst)
+    register_hooks_in_settings(
+        settings_path=Path.home() / ".claude" / "settings.json",
+        on_stop_command=_hook_command(venv_python, on_stop_dst),
+        on_start_command=_hook_command(venv_python, on_start_dst),
+    )
+    print(f"journal device '{args.device}' initialized.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
