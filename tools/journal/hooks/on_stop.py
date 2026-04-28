@@ -27,6 +27,7 @@ from tools.journal.paths import (
     read_device_name,
 )
 from tools.journal.push import push_breadcrumb
+from tools.journal.state import read_project_claudemd, write_state_claudemd
 from tools.journal.transcript import extract_transcript_text
 
 
@@ -77,6 +78,21 @@ def main() -> int:
         except Exception as exc:
             # Transcript extraction is best-effort: structural breadcrumb still pushes.
             _log_error(f"transcript extract failed: {exc!r}")
+        # Capture the project's CLAUDE.md (if present) into journal state so the
+        # routine has source-of-truth for Track 3 edit proposals. Best-effort:
+        # any failure here must not block the breadcrumb push below.
+        try:
+            cwd_str = payload.get("cwd")
+            if isinstance(cwd_str, str) and cwd_str:
+                content = read_project_claudemd(Path(cwd_str))
+                if content is not None:
+                    write_state_claudemd(
+                        journal_repo=journal_repo_path(),
+                        project_key=bc.project,
+                        content=content,
+                    )
+        except Exception as exc:
+            _log_error(f"state capture failed: {exc!r}")
         push_breadcrumb(
             breadcrumb=bc.to_dict(),
             journal_repo=journal_repo_path(),
