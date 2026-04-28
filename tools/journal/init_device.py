@@ -8,6 +8,7 @@ What it does:
 - Clones the claude-journal repo to ~/claude-journal if missing.
 - Records the device name to ~/.claude/journal/device-name.
 - Symlinks the project's hook entrypoints into ~/.claude/hooks/.
+- Symlinks the `journal` slash-command skill into ~/.claude/skills/journal/.
 - Registers the hooks under Stop and SessionStart in ~/.claude/settings.json
   (idempotent — safe to re-run).
 """
@@ -107,10 +108,15 @@ def main(argv: list[str] | None = None) -> int:
     on_start_dst = Path.home() / ".claude" / "hooks" / "journal-on-start.py"
     venv_python = project_root / "venv" / "bin" / "python"
 
+    journal_skill_src = project_root / "skills" / "journal"
+    journal_skill_dst = Path.home() / ".claude" / "skills" / "journal"
+
     _ensure_journal_clone(args.repo_url, Path(args.journal_path))
     _write_device_name(args.device)
     _symlink(on_stop_src, on_stop_dst)
     _symlink(on_start_src, on_start_dst)
+    if journal_skill_src.exists():
+        _symlink(journal_skill_src, journal_skill_dst)
     register_hooks_in_settings(
         settings_path=Path.home() / ".claude" / "settings.json",
         on_stop_command=_hook_command(venv_python, on_stop_dst),
