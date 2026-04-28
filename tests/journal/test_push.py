@@ -71,7 +71,7 @@ def test_push_keeps_in_buffer_on_git_failure(monkeypatch, tmp_path):
     assert ok is False
     assert buffer.exists()
     lines = [json.loads(l) for l in buffer.read_text().splitlines() if l.strip()]
-    assert any(l.get("session_id") == "abc-123" for l in lines)
+    assert any(l.get("breadcrumb", {}).get("session_id") == "abc-123" for l in lines)
 
 
 def test_drain_buffer_replays_pending(monkeypatch, tmp_path):
@@ -186,6 +186,78 @@ def test_safe_path_segment_blocks_traversal():
     assert ".." not in out
     assert _safe_path_segment("normal-id") == "normal-id"
     assert _safe_path_segment("with\\backslash") == "with_backslash"
+
+
+def test_push_writes_transcript_file_alongside_breadcrumb(monkeypatch, tmp_path):
+    journal, buffer = _make_paths(tmp_path)
+    monkeypatch.setattr("tools.journal.push._run_git", _git_ok)
+
+    breadcrumb = {
+        "session_id": "abc-123",
+        "device": "laptop",
+        "started_at": "2026-04-28T09:00:00+00:00",
+    }
+    push_breadcrumb(
+        breadcrumb=breadcrumb,
+        journal_repo=journal,
+        buffer_path=buffer,
+        date_str="2026-04-28",
+        transcript_text="## User\n\nhello\n",
+    )
+    bc_file = journal / "raw" / "laptop" / "2026-04-28" / "abc-123.json"
+    tx_file = journal / "raw" / "laptop" / "2026-04-28" / "abc-123.transcript.md"
+    assert bc_file.exists()
+    assert tx_file.exists()
+    assert "hello" in tx_file.read_text()
+
+
+def test_push_skips_transcript_file_when_empty(monkeypatch, tmp_path):
+    journal, buffer = _make_paths(tmp_path)
+    monkeypatch.setattr("tools.journal.push._run_git", _git_ok)
+
+    push_breadcrumb(
+        breadcrumb={"session_id": "no-tx", "device": "laptop"},
+        journal_repo=journal,
+        buffer_path=buffer,
+        date_str="2026-04-28",
+        transcript_text="",
+    )
+    tx_file = journal / "raw" / "laptop" / "2026-04-28" / "no-tx.transcript.md"
+    assert not tx_file.exists()
+
+
+def test_drain_replays_transcript_alongside_breadcrumb(monkeypatch, tmp_path):
+    journal, buffer = _make_paths(tmp_path)
+    monkeypatch.setattr("tools.journal.push._run_git", _git_ok)
+
+    payload = {
+        "breadcrumb": {"session_id": "buf-1", "device": "laptop", "started_at": "2026-04-28T09:00:00+00:00"},
+        "transcript": "## User\n\nbuffered prose\n",
+    }
+    buffer.write_text(json.dumps(payload) + "\n")
+
+    drained = _drain_buffer(buffer=buffer, journal_repo=journal, date_str="2026-04-28")
+    assert drained == 1
+    tx = journal / "raw" / "laptop" / "2026-04-28" / "buf-1.transcript.md"
+    assert tx.exists()
+    assert "buffered prose" in tx.read_text()
+
+
+def test_drain_handles_legacy_bare_breadcrumb_lines(monkeypatch, tmp_path):
+    """Buffer entries from before the v2 wrapper (bare breadcrumb dicts) must
+    still drain cleanly — no transcript file, just the breadcrumb."""
+    journal, buffer = _make_paths(tmp_path)
+    monkeypatch.setattr("tools.journal.push._run_git", _git_ok)
+
+    legacy = {"session_id": "legacy-1", "device": "laptop", "started_at": "2026-04-28T09:00:00+00:00"}
+    buffer.write_text(json.dumps(legacy) + "\n")
+
+    drained = _drain_buffer(buffer=buffer, journal_repo=journal, date_str="2026-04-28")
+    assert drained == 1
+    bc = journal / "raw" / "laptop" / "2026-04-28" / "legacy-1.json"
+    tx = journal / "raw" / "laptop" / "2026-04-28" / "legacy-1.transcript.md"
+    assert bc.exists()
+    assert not tx.exists()
 
 
 def test_write_breadcrumb_file_contains_evil_input(tmp_path):

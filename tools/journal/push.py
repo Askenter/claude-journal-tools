@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
@@ -37,6 +40,18 @@ def _write_breadcrumb_file(*, breadcrumb: dict, journal_repo: Path, date_str: st
     return target
 
 
+def _write_transcript_file(*, breadcrumb: dict, journal_repo: Path, date_str: str, transcript_text: str) -> Optional[Path]:
+    if not transcript_text:
+        return None
+    device = _safe_path_segment(breadcrumb.get("device", "unknown"))
+    sid = _safe_path_segment(breadcrumb["session_id"])
+    target_dir = journal_repo / "raw" / device / date_str
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / f"{sid}.transcript.md"
+    target.write_text(transcript_text if transcript_text.endswith("\n") else transcript_text + "\n")
+    return target
+
+
 def _git_push(journal_repo: Path, msg: str) -> bool:
     pull = _run_git(["git", "pull", "--rebase", "--quiet"], cwd=journal_repo)
     if pull.returncode != 0:
@@ -54,35 +69,53 @@ def _git_push(journal_repo: Path, msg: str) -> bool:
     return push.returncode == 0
 
 
-def _append_to_buffer(buffer: Path, breadcrumb: dict) -> None:
+def _append_to_buffer(buffer: Path, breadcrumb: dict, transcript_text: str) -> None:
+    """Buffer entries store {breadcrumb, transcript} as one JSON object per
+    line so the drain step can recover both sides without re-reading the
+    original transcript path (which may be gone by drain time)."""
     buffer.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"breadcrumb": breadcrumb, "transcript": transcript_text}
     with open(buffer, "a", encoding="utf-8") as f:
-        f.write(json.dumps(breadcrumb) + "\n")
+        f.write(json.dumps(payload) + "\n")
+
+
+def _parse_buffer_line(line: str) -> Optional[tuple[dict, str]]:
+    """Accept both the v2 wrapper schema and the legacy bare-breadcrumb
+    schema so an old buffer drains cleanly after the upgrade."""
+    line = line.strip()
+    if not line:
+        return None
+    try:
+        obj = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(obj, dict) and "breadcrumb" in obj and isinstance(obj["breadcrumb"], dict):
+        return obj["breadcrumb"], obj.get("transcript", "") or ""
+    if isinstance(obj, dict) and "session_id" in obj:
+        return obj, ""
+    return None
 
 
 def _drain_buffer(*, buffer: Path, journal_repo: Path, date_str: str) -> int:
-    """Re-apply buffered breadcrumbs from a previous offline session.
+    """Re-apply buffered entries from a previous offline session.
 
-    Writes each backlogged breadcrumb to disk, then attempts a single push.
-    On push success: clears the buffer and returns the count drained.
-    On push failure: leaves the buffer intact and returns 0 — the next call
-    will retry.
+    Writes each backlogged breadcrumb (and transcript, when present) to
+    disk, then attempts a single push. On success: clears the buffer and
+    returns the count drained. On failure: leaves the buffer intact.
     """
     if not buffer.exists():
         return 0
     drained = 0
     for line in buffer.read_text().splitlines():
-        line = line.strip()
-        if not line:
+        parsed = _parse_buffer_line(line)
+        if parsed is None:
             continue
-        try:
-            bc = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        _write_breadcrumb_file(
-            breadcrumb=bc,
-            journal_repo=journal_repo,
-            date_str=_drain_date_for(bc, fallback=date_str),
+        bc, transcript_text = parsed
+        date_for = _drain_date_for(bc, fallback=date_str)
+        _write_breadcrumb_file(breadcrumb=bc, journal_repo=journal_repo, date_str=date_for)
+        _write_transcript_file(
+            breadcrumb=bc, journal_repo=journal_repo, date_str=date_for,
+            transcript_text=transcript_text,
         )
         drained += 1
     if _git_push(journal_repo, f"raw: drain backlog ({drained})"):
@@ -97,8 +130,11 @@ def push_breadcrumb(
     journal_repo: Path,
     buffer_path: Path,
     date_str: str,
+    transcript_text: str = "",
 ) -> bool:
-    """Stage the breadcrumb and try to push. On failure, append to buffer."""
+    """Stage the breadcrumb (and the transcript text when provided) and try
+    to push them in one commit. On failure, append both to the buffer for
+    a later drain attempt."""
     try:
         _drain_buffer(buffer=buffer_path, journal_repo=journal_repo, date_str=date_str)
         _write_breadcrumb_file(
@@ -106,10 +142,16 @@ def push_breadcrumb(
             journal_repo=journal_repo,
             date_str=date_str,
         )
+        _write_transcript_file(
+            breadcrumb=breadcrumb,
+            journal_repo=journal_repo,
+            date_str=date_str,
+            transcript_text=transcript_text,
+        )
         device = breadcrumb.get("device", "unknown")
         if _git_push(journal_repo, f"raw: {device} {date_str} {breadcrumb['session_id']}"):
             return True
     except Exception:
         pass
-    _append_to_buffer(buffer_path, breadcrumb)
+    _append_to_buffer(buffer_path, breadcrumb, transcript_text)
     return False

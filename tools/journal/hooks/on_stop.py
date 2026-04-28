@@ -1,12 +1,12 @@
 """Stop hook entrypoint. Invoked by Claude Code at session end.
 
-Reads a JSON payload on stdin, builds a structural breadcrumb, and pushes
-it to claude-journal. Always exits 0 so it never blocks the user.
+Reads a JSON payload on stdin, builds a structural breadcrumb plus a
+tail-truncated transcript text file, and pushes both to claude-journal.
+Always exits 0 so it never blocks the user.
 
-Phase 1 pushes structural breadcrumbs only — the central nightly routine
-runs the LLM-driven consolidation. Per-turn augmentation here would burn
-subscription quota since Stop fires on every assistant turn, not just
-session end.
+The transcript text is what the central routine uses to extract user/
+project/feedback memories. The structural breadcrumb on its own is enough
+for digests but not for memory distillation.
 """
 import json
 import sys
@@ -27,6 +27,7 @@ from tools.journal.paths import (
     read_device_name,
 )
 from tools.journal.push import push_breadcrumb
+from tools.journal.transcript import extract_transcript_text
 
 
 def _read_payload() -> dict:
@@ -70,11 +71,18 @@ def main() -> int:
         device = read_device_name()
         bc = _build_breadcrumb(payload, device)
         date_str = bc.started_at.strftime("%Y-%m-%d")
+        transcript_text = ""
+        try:
+            transcript_text = extract_transcript_text(Path(payload["transcript_path"]))
+        except Exception as exc:
+            # Transcript extraction is best-effort: structural breadcrumb still pushes.
+            _log_error(f"transcript extract failed: {exc!r}")
         push_breadcrumb(
             breadcrumb=bc.to_dict(),
             journal_repo=journal_repo_path(),
             buffer_path=buffer_path(),
             date_str=date_str,
+            transcript_text=transcript_text,
         )
     except Exception as exc:
         _log_error(f"on_stop error: {exc!r}")
