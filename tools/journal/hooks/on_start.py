@@ -1,7 +1,9 @@
 """SessionStart hook entrypoint.
 
-Phase 1: pull claude-journal so this device sees other devices' breadcrumbs.
-Phase 2 will add memory/skill sync; Phase 3 will surface proposals.
+Phase 3: pull claude-journal AND sync consolidated memories (non-feedback)
+into Claude Code's auto-memory tree on this device.
+
+Surfacing of feedback proposals + skills sync is still future work.
 
 Always exits 0 so it never blocks the user.
 """
@@ -17,6 +19,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from tools.journal.paths import journal_repo_path
 from tools.journal.pull import pull_journal
+from tools.journal.sync_memories import sync_all_memories
 
 
 def _read_payload_safe() -> dict:
@@ -38,8 +41,18 @@ def _log_error(message: str) -> None:
 
 def main() -> int:
     try:
-        _ = _read_payload_safe()  # payload not used in Phase 1
-        pull_journal(journal_repo_path())
+        _ = _read_payload_safe()  # payload not used yet
+        journal = journal_repo_path()
+        pull_journal(journal)
+        try:
+            sync_all_memories(
+                journal_repo=journal,
+                claude_projects_dir=Path.home() / ".claude" / "projects",
+            )
+        except Exception as exc:
+            # Memory sync is best-effort — pull already succeeded, don't
+            # break the session over a sync hiccup.
+            _log_error(f"sync_memories failed: {exc!r}")
     except Exception as exc:
         _log_error(f"on_start error: {exc!r}")
     return 0
