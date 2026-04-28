@@ -56,7 +56,10 @@ def _git_push(journal_repo: Path, msg: str) -> bool:
     pull = _run_git(["git", "pull", "--rebase", "--quiet"], cwd=journal_repo)
     if pull.returncode != 0:
         return False
-    add = _run_git(["git", "add", "raw/"], cwd=journal_repo)
+    # Include state/ so the project's CLAUDE.md snapshot lands in the same
+    # commit when it changed during the session. -A makes git add silent
+    # about missing dirs.
+    add = _run_git(["git", "add", "-A", "raw/", "state/"], cwd=journal_repo)
     if add.returncode != 0:
         return False
     status = _run_git(["git", "status", "--porcelain"], cwd=journal_repo)

@@ -51,6 +51,63 @@ def test_on_stop_pushes_structural_breadcrumb(monkeypatch, tmp_path):
     assert "open_questions" not in sent
 
 
+def test_on_stop_writes_project_state_when_claudemd_exists(monkeypatch, tmp_path):
+    """When the project has a CLAUDE.md, the Stop hook should snapshot it
+    into journal/state/<project>/CLAUDE.md before pushing."""
+    project = tmp_path / "ASEP"
+    project.mkdir()
+    (project / "CLAUDE.md").write_text("# project rules\n")
+    journal = tmp_path / "claude-journal"
+    (journal / "raw").mkdir(parents=True)
+    buffer = tmp_path / "buf.jsonl"
+    devname = tmp_path / "device-name"
+    devname.write_text("laptop\n")
+
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text(
+        '{"type":"user","timestamp":"2026-04-28T09:00:00Z","message":{"content":"hi"}}\n'
+    )
+
+    # Patch the bindings the on_stop module imported, not the source module —
+    # `from X import f` creates a fresh local binding immune to source patches.
+    monkeypatch.setattr("tools.journal.hooks.on_stop.journal_repo_path", lambda: journal)
+    monkeypatch.setattr("tools.journal.hooks.on_stop.buffer_path", lambda: buffer)
+    monkeypatch.setattr("tools.journal.paths.device_name_path", lambda: devname)
+    monkeypatch.setattr("tools.journal.hooks.on_stop.read_device_name", lambda: "laptop")
+    monkeypatch.setattr("tools.journal.hooks.on_stop.push_breadcrumb", MagicMock(return_value=True))
+
+    payload = {"session_id": "s1", "cwd": str(project), "transcript_path": str(transcript)}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    on_stop.main()
+
+    state_files = list((journal / "state").rglob("CLAUDE.md"))
+    assert len(state_files) == 1
+    assert "project rules" in state_files[0].read_text()
+
+
+def test_on_stop_skips_state_when_no_claudemd(monkeypatch, tmp_path):
+    project = tmp_path / "noclaude"
+    project.mkdir()
+    journal = tmp_path / "claude-journal"
+    (journal / "raw").mkdir(parents=True)
+    buffer = tmp_path / "buf.jsonl"
+    devname = tmp_path / "device-name"
+    devname.write_text("laptop\n")
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text("")
+
+    monkeypatch.setattr("tools.journal.hooks.on_stop.journal_repo_path", lambda: journal)
+    monkeypatch.setattr("tools.journal.hooks.on_stop.buffer_path", lambda: buffer)
+    monkeypatch.setattr("tools.journal.hooks.on_stop.read_device_name", lambda: "laptop")
+    monkeypatch.setattr("tools.journal.hooks.on_stop.push_breadcrumb", MagicMock(return_value=True))
+
+    payload = {"session_id": "s1", "cwd": str(project), "transcript_path": str(transcript)}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    on_stop.main()
+
+    assert not (journal / "state").exists() or not list((journal / "state").rglob("CLAUDE.md"))
+
+
 def test_on_stop_swallows_invalid_stdin(monkeypatch):
     monkeypatch.setattr("sys.stdin", io.StringIO("not json"))
     assert on_stop.main() == 0
