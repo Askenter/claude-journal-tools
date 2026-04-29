@@ -28,6 +28,11 @@ _REDACTION_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9_-]{20,}"),       # Anthropic / OpenAI / OAuth
     re.compile(r"ghp_[A-Za-z0-9]{20,}"),        # GitHub PAT classic
     re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),  # GitHub PAT fine-grained
+    # git-crypt symmetric keyfile, base64-encoded. Every git-crypt key
+    # starts with the bytes b"\x00GITCRYPT" — base64 of those 9 bytes is
+    # always the prefix "AEdJVENSWVBU". Catching that prefix scrubs the
+    # key from transcripts even if it appears mid-paragraph.
+    re.compile(r"AEdJVENSWVBU[A-Za-z0-9+/=]{50,}"),
 ]
 
 

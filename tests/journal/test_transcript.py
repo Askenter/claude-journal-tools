@@ -72,6 +72,26 @@ def test_redacts_token_patterns(tmp_path):
     assert "[REDACTED]" in out
 
 
+def test_redacts_git_crypt_keyfile_base64(tmp_path):
+    # Every git-crypt symmetric keyfile, base64-encoded, starts with
+    # "AEdJVENSWVBU" (base64 of "\x00GITCRYPT"). Transcripts that quote
+    # such a key must scrub it before pushing.
+    fake_key_b64 = (
+        "AEdJVENSWVBUS0VZAAAAAgAAAAAAAAABAAAABAAAAAAAAAADAAAAIHQa168sk20F"
+        "xWezedRyyLrvpfOF+x4KzjXi6RdDZCCGAAAABQAAAECFDFhZAY1kMEbSZlIwOQ7r"
+        "nGhtRZhZYW9DGbaz3M7NWt+W+qo8wBQxuh1lKWjGZ6AKHri4j3yABxIwd7CWlo78"
+        "AAAAAA=="
+    )
+    transcript = tmp_path / "t.jsonl"
+    _write_jsonl(transcript, [
+        {"type": "user", "message": {"content": f"key is {fake_key_b64} keep secret"}},
+    ])
+    out = extract_transcript_text(transcript)
+    assert fake_key_b64 not in out
+    assert "AEdJVENSWVBU" not in out
+    assert "[REDACTED]" in out
+
+
 def test_skips_malformed_jsonl_lines(tmp_path):
     transcript = tmp_path / "t.jsonl"
     transcript.write_text(
