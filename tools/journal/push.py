@@ -53,20 +53,22 @@ def _write_transcript_file(*, breadcrumb: dict, journal_repo: Path, date_str: st
 
 
 def _git_push(journal_repo: Path, msg: str) -> bool:
-    pull = _run_git(["git", "pull", "--rebase", "--quiet"], cwd=journal_repo)
-    if pull.returncode != 0:
-        return False
-    # Include state/ so the project's CLAUDE.md snapshot lands in the same
-    # commit when it changed during the session. -A makes git add silent
-    # about missing dirs.
+    # Stage and commit BEFORE pulling. `git pull --rebase` refuses to run
+    # with unstaged changes, and a Stop hook can re-fire for the same
+    # session_id (resumed session) and rewrite an already-pushed breadcrumb
+    # — leaving raw/ tracked files locally modified would otherwise wedge
+    # every future push. Include state/ so the project's CLAUDE.md
+    # snapshot lands in the same commit when it changed during the session.
     add = _run_git(["git", "add", "-A", "raw/", "state/"], cwd=journal_repo)
     if add.returncode != 0:
         return False
     status = _run_git(["git", "status", "--porcelain"], cwd=journal_repo)
-    if not status.stdout.strip():
-        return True
-    commit = _run_git(["git", "commit", "-m", msg], cwd=journal_repo)
-    if commit.returncode != 0:
+    if status.stdout.strip():
+        commit = _run_git(["git", "commit", "-m", msg], cwd=journal_repo)
+        if commit.returncode != 0:
+            return False
+    pull = _run_git(["git", "pull", "--rebase", "--quiet"], cwd=journal_repo)
+    if pull.returncode != 0:
         return False
     push = _run_git(["git", "push"], cwd=journal_repo)
     return push.returncode == 0
