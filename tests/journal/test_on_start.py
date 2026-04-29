@@ -87,6 +87,50 @@ def test_on_start_emits_nothing_when_no_proposals(monkeypatch, tmp_path, capsys)
     assert capsys.readouterr().out == ""
 
 
+def test_on_start_emits_locked_warning_when_repo_locked(monkeypatch, tmp_path, capsys):
+    """When is_repo_unlocked returns False, SessionStart surfaces a
+    warning even if there are no proposals."""
+    journal = tmp_path / "claude-journal"
+    journal.mkdir()
+    monkeypatch.setattr("tools.journal.paths.journal_repo_path", lambda: journal)
+    monkeypatch.setattr("tools.journal.hooks.on_start.pull_journal", MagicMock(return_value=True))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_memories", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_skills", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.is_repo_unlocked", lambda _repo: False)
+    monkeypatch.setattr(
+        "tools.journal.hooks.on_start.build_proposal_context",
+        lambda **kw: None,
+    )
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    on_start.main()
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    assert "locked" in parsed["hookSpecificOutput"]["additionalContext"].lower()
+
+
+def test_on_start_combines_locked_warning_with_proposals(monkeypatch, tmp_path, capsys):
+    journal = tmp_path / "claude-journal"
+    journal.mkdir()
+    monkeypatch.setattr("tools.journal.paths.journal_repo_path", lambda: journal)
+    monkeypatch.setattr("tools.journal.hooks.on_start.pull_journal", MagicMock(return_value=True))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_memories", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_skills", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.is_repo_unlocked", lambda _repo: False)
+    monkeypatch.setattr(
+        "tools.journal.hooks.on_start.build_proposal_context",
+        lambda **kw: "📓 surface this",
+    )
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    on_start.main()
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    ctx = parsed["hookSpecificOutput"]["additionalContext"]
+    assert "locked" in ctx.lower()
+    assert "📓 surface this" in ctx
+
+
 def test_pull_journal_returns_false_when_not_a_git_repo(tmp_path):
     not_a_repo = tmp_path / "fake"
     not_a_repo.mkdir()

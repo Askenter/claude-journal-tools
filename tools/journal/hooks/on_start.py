@@ -17,11 +17,18 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from tools.journal.encryption import is_repo_unlocked
 from tools.journal.paths import journal_repo_path
 from tools.journal.pull import pull_journal
 from tools.journal.surface_proposals import build_proposal_context
 from tools.journal.sync_memories import sync_all_memories
 from tools.journal.sync_skills import sync_all_skills
+
+LOCKED_REPO_WARNING = (
+    "WARNING: claude-journal is locked on this device — distilled "
+    "memories, skills, and proposals will not surface correctly. "
+    "Run `git-crypt unlock ~/.claude/journal/git-crypt.key` to fix."
+)
 
 
 def _read_payload_safe() -> dict:
@@ -81,13 +88,23 @@ def main() -> int:
     except Exception as exc:
         _log_error(f"sync_skills failed: {exc!r}")
 
+    segments: list[str] = []
+    try:
+        if not is_repo_unlocked(journal):
+            segments.append(LOCKED_REPO_WARNING)
+    except Exception as exc:
+        _log_error(f"is_repo_unlocked failed: {exc!r}")
+
     if cwd:
         try:
             ctx = build_proposal_context(journal_repo=journal, cwd=cwd)
             if ctx:
-                _emit_additional_context(ctx)
+                segments.append(ctx)
         except Exception as exc:
             _log_error(f"surface_proposals failed: {exc!r}")
+
+    if segments:
+        _emit_additional_context("\n\n".join(segments))
 
     return 0
 
