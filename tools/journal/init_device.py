@@ -68,6 +68,29 @@ def _ensure_journal_clone(repo_url: str, target: Path) -> None:
     subprocess.run(["git", "clone", repo_url, str(target)], check=True)
 
 
+def attempt_unlock(journal_path: Path, keyfile: Path) -> str:
+    """Try to unlock the journal repo with git-crypt. Returns a status
+    string the caller can print verbatim. Never raises."""
+    if not keyfile.exists():
+        return (
+            f"WARNING: keyfile not found at {keyfile}. claude-journal is "
+            f"locked. Transfer the keyfile from your password manager and "
+            f"run: git-crypt unlock {keyfile}"
+        )
+    result = subprocess.run(
+        ["git-crypt", "unlock", str(keyfile)],
+        cwd=str(journal_path),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return "claude-journal unlocked."
+    return (
+        f"WARNING: git-crypt unlock failed (exit {result.returncode}): "
+        f"{result.stderr.strip() or result.stdout.strip()}"
+    )
+
+
 def _write_device_name(device: str) -> None:
     p = Path.home() / ".claude" / "journal" / "device-name"
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -112,6 +135,8 @@ def main(argv: list[str] | None = None) -> int:
     journal_skill_dst = Path.home() / ".claude" / "skills" / "journal"
 
     _ensure_journal_clone(args.repo_url, Path(args.journal_path))
+    keyfile = Path.home() / ".claude" / "journal" / "git-crypt.key"
+    print(f"[init] {attempt_unlock(Path(args.journal_path), keyfile)}")
     _write_device_name(args.device)
     _symlink(on_stop_src, on_stop_dst)
     _symlink(on_start_src, on_start_dst)

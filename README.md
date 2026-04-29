@@ -30,8 +30,36 @@ venv/bin/python -m pip install pytest   # only needed for running tests
 
 The init script:
 - clones [claude-journal](https://github.com/askenter/claude-journal) to `~/claude-journal`
+- attempts `git-crypt unlock ~/.claude/journal/git-crypt.key` (warns if absent)
 - records the device name at `~/.claude/journal/device-name`
 - symlinks hook entrypoints into `~/.claude/hooks/`
 - registers them under Stop and SessionStart in `~/.claude/settings.json`
 
 Re-running the script is safe (idempotent).
+
+## Unlocking the journal repo
+
+The `claude-journal` data repo is encrypted at rest with git-crypt
+(see [its `SECURITY.md`](https://github.com/askenter/claude-journal/blob/main/SECURITY.md)
+for the encrypted-vs-plaintext directory split and threat model).
+
+After cloning, transfer the symmetric key from your password manager to
+`~/.claude/journal/git-crypt.key` (`chmod 600`) and run:
+
+```bash
+git-crypt unlock ~/.claude/journal/git-crypt.key
+```
+
+Without this step, `raw/`, `digests/`, `memories/`, `skills/`,
+`proposals/`, and `state/` are ciphertext on disk. The Stop hook still
+pushes safely (writes are re-encrypted by git filters), but pulled
+memories and proposals will be unreadable. The SessionStart hook prints
+a loud `additionalContext` warning when the repo is locked.
+
+Install git-crypt before running the init script:
+
+```bash
+# Oracle Linux / RHEL: sudo dnf --enablerepo=ol9_developer_EPEL install -y git-crypt
+# Debian/Ubuntu:       sudo apt-get install -y git-crypt
+# macOS:               brew install git-crypt
+```
