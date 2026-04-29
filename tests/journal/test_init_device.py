@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
-from tools.journal.init_device import _hook_command, register_hooks_in_settings
+from unittest.mock import MagicMock
+from tools.journal.init_device import _hook_command, attempt_unlock, register_hooks_in_settings
 
 
 def test_hook_command_uses_explicit_python():
@@ -58,6 +59,45 @@ def test_register_hooks_preserves_existing_unrelated(tmp_path):
     cmds = [h["command"] for h in data["hooks"]["Stop"][0]["hooks"]]
     assert "/some/other/hook.sh" in cmds
     assert stop_cmd in cmds
+
+
+def test_attempt_unlock_warns_when_keyfile_missing(tmp_path):
+    journal = tmp_path / "j"
+    journal.mkdir()
+    keyfile = tmp_path / "no-such-file.key"
+    msg = attempt_unlock(journal, keyfile)
+    assert "WARNING" in msg
+    assert str(keyfile) in msg
+
+
+def test_attempt_unlock_succeeds_when_subprocess_returns_zero(tmp_path, monkeypatch):
+    journal = tmp_path / "j"
+    journal.mkdir()
+    keyfile = tmp_path / "key"
+    keyfile.write_bytes(b"\x00fake-key")
+
+    fake_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr("tools.journal.init_device.subprocess.run", fake_run)
+
+    msg = attempt_unlock(journal, keyfile)
+    assert msg == "claude-journal unlocked."
+    args, kwargs = fake_run.call_args
+    assert args[0] == ["git-crypt", "unlock", str(keyfile)]
+    assert kwargs["cwd"] == str(journal)
+
+
+def test_attempt_unlock_warns_when_git_crypt_fails(tmp_path, monkeypatch):
+    journal = tmp_path / "j"
+    journal.mkdir()
+    keyfile = tmp_path / "key"
+    keyfile.write_bytes(b"\x00bad-key")
+
+    fake_run = MagicMock(return_value=MagicMock(returncode=1, stdout="", stderr="bad key"))
+    monkeypatch.setattr("tools.journal.init_device.subprocess.run", fake_run)
+
+    msg = attempt_unlock(journal, keyfile)
+    assert "WARNING" in msg
+    assert "bad key" in msg
 
 
 def test_register_hooks_creates_session_start_when_only_stop_exists(tmp_path):
