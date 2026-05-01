@@ -92,17 +92,17 @@ def test_drain_buffer_replays_pending(monkeypatch, tmp_path):
 
 
 def test_push_exercises_commit_and_push_when_status_is_dirty(monkeypatch, tmp_path):
-    """Cover the commit+push path: simulate a non-empty `git status --porcelain`
-    so _git_push doesn't early-return on the clean check."""
+    """Cover the commit+push path: simulate `git diff --cached --quiet`
+    reporting staged changes so _git_push runs commit + push."""
     journal, buffer = _make_paths(tmp_path)
     calls: list[list[str]] = []
 
     def fake_run_git(args, cwd):
         calls.append(args)
         result = MagicMock()
-        result.returncode = 0
-        # Make `git status --porcelain` look dirty so commit+push runs.
-        result.stdout = "?? raw/laptop/2026-04-28/abc-123.json\n" if args[:3] == ["git", "status", "--porcelain"] else ""
+        # `git diff --cached --quiet` exits 1 when the index is dirty.
+        result.returncode = 1 if args[:2] == ["git", "diff"] else 0
+        result.stdout = ""
         result.stderr = ""
         return result
 
@@ -118,8 +118,56 @@ def test_push_exercises_commit_and_push_when_status_is_dirty(monkeypatch, tmp_pa
     invoked = [c[:2] for c in calls]
     assert ["git", "pull"] in invoked
     assert ["git", "add"] in invoked
-    assert ["git", "status"] in invoked
+    assert ["git", "diff"] in invoked
     assert ["git", "commit"] in invoked
+    assert ["git", "push"] in invoked
+    # The pull-rebase must use --autostash so an unrelated dirty tree
+    # (e.g. git-crypt smudge artefacts on .gitkeep blobs under encrypted
+    # paths) doesn't wedge the push the way it did on this Mac after
+    # the 2026-04-29 git-crypt unlock.
+    pull_calls = [c for c in calls if c[:2] == ["git", "pull"]]
+    assert pull_calls, "expected at least one git pull invocation"
+    assert all("--autostash" in c for c in pull_calls)
+
+
+def test_push_skips_commit_when_nothing_is_staged(monkeypatch, tmp_path):
+    """Working tree may carry unstaged dirt (e.g. git-crypt smudge artefacts
+    on .gitkeep blobs) that `git add -A raw/ state/` does not stage. In that
+    case _git_push must skip `git commit` (which would exit 1 with "nothing
+    to commit") and proceed straight to pull-rebase + push so any local-only
+    commits from earlier still reach origin."""
+    journal, buffer = _make_paths(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run_git(args, cwd):
+        calls.append(args)
+        result = MagicMock()
+        result.stdout = ""
+        result.stderr = ""
+        # `git diff --cached --quiet` returns 0 when the index is clean.
+        if args[:2] == ["git", "diff"]:
+            result.returncode = 0
+        elif args[:2] == ["git", "commit"]:
+            # Should never be reached in this scenario; if it is, simulate
+            # the real "nothing to commit" failure so the test catches it.
+            result.returncode = 1
+            result.stderr = "nothing to commit, working tree clean\n"
+        else:
+            result.returncode = 0
+        return result
+
+    monkeypatch.setattr("tools.journal.push._run_git", fake_run_git)
+
+    ok = push_breadcrumb(
+        breadcrumb={"session_id": "no-stage", "device": "laptop"},
+        journal_repo=journal,
+        buffer_path=buffer,
+        date_str="2026-04-28",
+    )
+    assert ok is True
+    invoked = [c[:2] for c in calls]
+    assert ["git", "commit"] not in invoked
+    assert ["git", "pull"] in invoked
     assert ["git", "push"] in invoked
 
 
@@ -129,9 +177,15 @@ def test_drain_buffer_keeps_backlog_when_push_fails(monkeypatch, tmp_path):
 
     def fake_run_git(args, cwd):
         result = MagicMock()
-        result.stdout = "?? something\n" if args[:3] == ["git", "status", "--porcelain"] else ""
+        result.stdout = ""
         result.stderr = ""
-        result.returncode = 1 if args[:2] == ["git", "push"] else 0
+        if args[:2] == ["git", "push"]:
+            result.returncode = 1
+        elif args[:2] == ["git", "diff"]:
+            # Index has staged changes so the commit path runs.
+            result.returncode = 1
+        else:
+            result.returncode = 0
         return result
 
     monkeypatch.setattr("tools.journal.push._run_git", fake_run_git)
