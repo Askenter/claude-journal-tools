@@ -62,12 +62,20 @@ def _git_push(journal_repo: Path, msg: str) -> bool:
     add = _run_git(["git", "add", "-A", "raw/", "state/"], cwd=journal_repo)
     if add.returncode != 0:
         return False
-    status = _run_git(["git", "status", "--porcelain"], cwd=journal_repo)
-    if status.stdout.strip():
+    # Check the INDEX, not the working tree: porcelain output reports
+    # unstaged dirt too (e.g. git-crypt smudge artefacts on .gitkeep
+    # blobs), which would otherwise trigger an empty `git commit` that
+    # exits 1 with "nothing to commit" and wedge the push.
+    diff = _run_git(["git", "diff", "--cached", "--quiet"], cwd=journal_repo)
+    if diff.returncode != 0:
         commit = _run_git(["git", "commit", "-m", msg], cwd=journal_repo)
         if commit.returncode != 0:
             return False
-    pull = _run_git(["git", "pull", "--rebase", "--quiet"], cwd=journal_repo)
+    # --autostash so an unrelated dirty working tree (e.g. git-crypt
+    # smudge-filter artefacts on .gitkeep blobs under encrypted paths
+    # after `git-crypt unlock`) doesn't abort the rebase and silently
+    # wedge every future push.
+    pull = _run_git(["git", "pull", "--rebase", "--autostash", "--quiet"], cwd=journal_repo)
     if pull.returncode != 0:
         return False
     push = _run_git(["git", "push"], cwd=journal_repo)

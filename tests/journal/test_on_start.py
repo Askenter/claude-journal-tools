@@ -150,4 +150,58 @@ def test_pull_journal_calls_git_pull_when_repo_exists(monkeypatch, tmp_path):
 
     monkeypatch.setattr("tools.journal.pull._run_git", fake_run_git)
     assert pull_module.pull_journal(journal) is True
-    assert captured == [["git", "pull", "--rebase", "--quiet"]]
+    # --autostash so a dirty working tree (e.g. git-crypt smudge-filter
+    # artefacts on .gitkeep blobs under encrypted paths) doesn't wedge
+    # the rebase.
+    assert captured == [["git", "pull", "--rebase", "--autostash", "--quiet"]]
+
+
+def test_pull_journal_logs_failure_to_buffer(monkeypatch, tmp_path):
+    """Silent pull failures are how we ended up with a 2-day-stale local
+    clone. When git returns non-zero, append a line to the buffer log so
+    the next inspection sees it."""
+    journal = tmp_path / "claude-journal"
+    (journal / ".git").mkdir(parents=True)
+    log_path = tmp_path / "journal-buffer.log"
+    monkeypatch.setattr("tools.journal.pull._BUFFER_LOG", log_path)
+
+    def fake_run_git(args, cwd):
+        result = MagicMock()
+        result.returncode = 1
+        result.stderr = "fatal: cannot pull with rebase: You have unstaged changes.\n"
+        return result
+
+    monkeypatch.setattr("tools.journal.pull._run_git", fake_run_git)
+    assert pull_module.pull_journal(journal) is False
+    assert log_path.exists()
+    contents = log_path.read_text()
+    assert "pull_journal" in contents
+    assert "unstaged changes" in contents
+
+
+def test_pull_journal_does_not_log_when_not_a_repo(monkeypatch, tmp_path):
+    """The 'no .git directory' case is normal on a fresh device — don't
+    spam the buffer log with it."""
+    not_a_repo = tmp_path / "fake"
+    not_a_repo.mkdir()
+    log_path = tmp_path / "journal-buffer.log"
+    monkeypatch.setattr("tools.journal.pull._BUFFER_LOG", log_path)
+    assert pull_module.pull_journal(not_a_repo) is False
+    assert not log_path.exists()
+
+
+def test_pull_journal_does_not_log_on_success(monkeypatch, tmp_path):
+    journal = tmp_path / "claude-journal"
+    (journal / ".git").mkdir(parents=True)
+    log_path = tmp_path / "journal-buffer.log"
+    monkeypatch.setattr("tools.journal.pull._BUFFER_LOG", log_path)
+
+    def fake_run_git(args, cwd):
+        result = MagicMock()
+        result.returncode = 0
+        result.stderr = ""
+        return result
+
+    monkeypatch.setattr("tools.journal.pull._run_git", fake_run_git)
+    assert pull_module.pull_journal(journal) is True
+    assert not log_path.exists()
