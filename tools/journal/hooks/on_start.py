@@ -30,6 +30,13 @@ LOCKED_REPO_WARNING = (
     "Run `git-crypt unlock ~/.claude/journal/git-crypt.key` to fix."
 )
 
+STALE_REPO_WARNING = (
+    "WARNING: claude-journal pull failed on this SessionStart — distilled "
+    "memories, skills, and proposals shown below may be stale. Check "
+    "`~/.claude/journal-buffer.log` for the git stderr, and inspect "
+    "`git -C ~/claude-journal status` for a dirty worktree or divergence."
+)
+
 
 def _read_payload_safe() -> dict:
     try:
@@ -65,9 +72,10 @@ def _emit_additional_context(text: str) -> None:
 def main() -> int:
     payload = _read_payload_safe()
     cwd = payload.get("cwd") if isinstance(payload, dict) else None
+    pull_ok = False
     try:
         journal = journal_repo_path()
-        pull_journal(journal)
+        pull_ok = bool(pull_journal(journal))
     except Exception as exc:
         _log_error(f"on_start pull failed: {exc!r}")
         return 0
@@ -89,6 +97,8 @@ def main() -> int:
         _log_error(f"sync_skills failed: {exc!r}")
 
     segments: list[str] = []
+    if not pull_ok:
+        segments.append(STALE_REPO_WARNING)
     try:
         if not is_repo_unlocked(journal):
             segments.append(LOCKED_REPO_WARNING)
