@@ -131,6 +131,35 @@ def test_on_start_combines_locked_warning_with_proposals(monkeypatch, tmp_path, 
     assert "📓 surface this" in ctx
 
 
+def test_on_start_emits_stale_warning_when_pull_fails(monkeypatch, tmp_path, capsys):
+    """Regression: a failed journal pull must surface a SessionStart
+    warning so the next assistant turn knows distilled memories may be
+    stale, instead of silently mirroring last week's state.
+
+    Origin's pull.py already logs git stderr to journal-buffer.log on
+    failure, but the file log is invisible mid-conversation — only the
+    SessionStart additionalContext reaches the next assistant turn."""
+    journal = tmp_path / "claude-journal"
+    journal.mkdir()
+    monkeypatch.setattr("tools.journal.paths.journal_repo_path", lambda: journal)
+    monkeypatch.setattr("tools.journal.hooks.on_start.pull_journal", MagicMock(return_value=False))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_memories", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_skills", MagicMock(return_value=[]))
+    monkeypatch.setattr("tools.journal.hooks.on_start.is_repo_unlocked", lambda _repo: True)
+    monkeypatch.setattr(
+        "tools.journal.hooks.on_start.build_proposal_context",
+        lambda **kw: None,
+    )
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    on_start.main()
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    ctx = parsed["hookSpecificOutput"]["additionalContext"]
+    assert "pull failed" in ctx.lower()
+    assert "stale" in ctx.lower()
+
+
 def test_pull_journal_returns_false_when_not_a_git_repo(tmp_path):
     not_a_repo = tmp_path / "fake"
     not_a_repo.mkdir()
