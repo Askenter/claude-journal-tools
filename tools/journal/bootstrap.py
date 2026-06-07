@@ -208,8 +208,11 @@ def main(argv: list[str] | None = None) -> int:
         print("\nlocal-only init complete. Add a private remote and push when ready.")
 
     print(
-        "\nNext: set CLAUDE_JOURNAL_REPO_URL to this repo's URL and run "
-        "tools/journal/init_device.py <device-name> on each device."
+        "\nNext steps:\n"
+        "  1. set CLAUDE_JOURNAL_REPO_URL to this repo's URL and run\n"
+        "     tools/journal/init_device.py <device-name> on each device.\n"
+        "  2. once devices are set up, create the nightly cloud routine with\n"
+        "     /claude-journal:journal-schedule (once per account)."
     )
     return 0
 
