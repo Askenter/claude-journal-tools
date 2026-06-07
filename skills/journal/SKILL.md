@@ -1,13 +1,16 @@
 ---
 name: journal
-description: Use when the user runs `/journal accept`, `/journal skip`, or `/journal edit` to act on pending claude-journal proposals (feedback memories or CLAUDE.md edits surfaced at SessionStart).
+description: Use when the user runs the journal slash command with `accept`, `skip`, or `edit` (e.g. `/claude-journal:journal accept`) to act on pending claude-journal proposals (feedback memories or CLAUDE.md edits surfaced at SessionStart).
 ---
 
-You are handling a `/journal` slash-command invocation. The journal pipeline
+You are handling a journal slash-command invocation. The journal pipeline
 distills behavioral rules and CLAUDE.md edits from recent sessions into
-proposal files at `~/claude-journal/proposals/<date>-<project-key>.md`. The
+proposal files under the data repo's `proposals/<date>-<project-key>.md`. The
 SessionStart hook surfaces a list of pending proposals via system reminder
 when the user starts a session in an affected project.
+
+The data repo lives at `$CLAUDE_JOURNAL_PATH` (default `~/claude-journal`);
+all `~/claude-journal/...` paths below mean that directory.
 
 ## What to do
 

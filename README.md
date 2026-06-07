@@ -1,65 +1,47 @@
 # claude-journal-tools
 
-Code that powers the personal cognitive-consolidation pipeline: per-device
-Stop/SessionStart hooks that push session breadcrumbs to the
-[claude-journal](https://github.com/askenter/claude-journal) data repo.
+A Claude Code plugin for a personal cognitive-consolidation pipeline:
+per-device Stop/SessionStart hooks that push session breadcrumbs to **your
+own** encrypted `claude-journal` data repo, plus a `/journal` skill for
+resolving consolidation proposals.
 
-Phase 1 (this repo's current scope): structural breadcrumbs only — no
-in-hook LLM. The central nightly Anthropic-cloud routine (Phase 2) does
-the LLM-driven distillation across all devices' breadcrumbs, and is
-scheduled with Claude Code's `/schedule` (see
-[Phase 2 consolidator via `/schedule`](#phase-2-consolidator-via-schedule)).
+> **Read [`SECURITY.md`](SECURITY.md) first.** These hooks push the contents
+> of your sessions (including transcripts) to a git repo on every session
+> exit. Your data repo **must be private and git-crypt-encrypted**. This
+> tools repo ships no data repo and no key — you supply your own.
+
+Phase 1 (this repo's scope): structural breadcrumbs only — no in-hook LLM.
+The central nightly Anthropic-cloud routine (Phase 2) does the LLM-driven
+distillation across all devices' breadcrumbs, scheduled with Claude Code's
+`/schedule` (see [Phase 2 consolidator](#phase-2-consolidator-via-schedule)).
 
 ## Layout
 
 ```
 claude-journal-tools/
-├── tools/journal/      hook implementation, breadcrumb model, push/pull, init
-├── tests/journal/      pytest suite (stdlib only, ~28 tests)
-├── scripts/            init-journal-device.sh
-├── skills/journal/     /journal slash-command skill (accept/skip/edit proposals)
-└── docs/               design spec + phase plans
+├── .claude-plugin/
+│   ├── plugin.json        plugin manifest (hooks + auto-discovered skill)
+│   └── marketplace.json   marketplace entry for /plugin install
+├── hooks/hooks.json       declarative Stop + SessionStart hook wiring
+├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
+├── tests/journal/         pytest suite (stdlib only, ~28 tests)
+├── scripts/               init-journal-device.sh (data-repo setup)
+├── skills/journal/        /journal slash-command skill (accept/skip/edit)
+└── docs/                  design spec + phase plans
 ```
 
-## First-time setup on a device
+Runtime is **Python 3.11+, standard library only** — no `pip install`, no
+`node_modules`. The hooks run under whatever `python3` is on your `PATH`.
 
-```bash
-git clone git@github.com:askenter/claude-journal-tools.git ~/claude-journal-tools
-cd ~/claude-journal-tools
-python3 -m venv venv
-venv/bin/python -m pip install pytest   # only needed for running tests
-./scripts/init-journal-device.sh <device-name>
-```
+---
 
-The init script:
-- clones [claude-journal](https://github.com/askenter/claude-journal) to `~/claude-journal`
-- attempts `git-crypt unlock ~/.claude/journal/git-crypt.key` (warns if absent)
-- records the device name at `~/.claude/journal/device-name`
-- symlinks hook entrypoints into `~/.claude/hooks/`
-- registers them under Stop and SessionStart in `~/.claude/settings.json`
+## Requirements
 
-Re-running the script is safe (idempotent).
+- `git`, `git-crypt`, `python3.11+` on `PATH`
+- A **private** GitHub (or other git host) repo to use as your data store
+- A git-crypt symmetric key, stored at `~/.claude/journal/git-crypt.key`
 
-## Unlocking the journal repo
-
-The `claude-journal` data repo is encrypted at rest with git-crypt
-(see [its `SECURITY.md`](https://github.com/askenter/claude-journal/blob/main/SECURITY.md)
-for the encrypted-vs-plaintext directory split and threat model).
-
-After cloning, transfer the symmetric key from your password manager to
-`~/.claude/journal/git-crypt.key` (`chmod 600`) and run:
-
-```bash
-git-crypt unlock ~/.claude/journal/git-crypt.key
-```
-
-Without this step, `raw/`, `digests/`, `memories/`, `skills/`,
-`proposals/`, and `state/` are ciphertext on disk. The Stop hook still
-pushes safely (writes are re-encrypted by git filters), but pulled
-memories and proposals will be unreadable. The SessionStart hook prints
-a loud `additionalContext` warning when the repo is locked.
-
-Install git-crypt before running the init script:
+Install git-crypt:
 
 ```bash
 # Oracle Linux / RHEL: sudo dnf --enablerepo=ol9_developer_EPEL install -y git-crypt
@@ -67,94 +49,91 @@ Install git-crypt before running the init script:
 # macOS:               brew install git-crypt
 ```
 
----
+## Install (Claude Code plugin)
 
-## Agent quickstart (Claude Code, non-interactive)
-
-This section is written for an autonomous agent running inside Claude
-Code (e.g. invoked via `claude -p "<prompt>"`) that needs to provision
-this pipeline on a fresh device end-to-end. Run each step from the
-user's home directory unless noted, and verify the success condition
-before moving on.
-
-> Pre-flight requirements the agent should confirm exist on the host:
-> `git`, `git-crypt`, `python3.11+`, `gh` (authenticated), and the
-> `claude` CLI on `$PATH`. If any are missing, install them first
-> using the platform package manager — do not skip git-crypt.
-
-### 1. Clone both repos
-
-```bash
-gh repo clone askenter/claude-journal-tools ~/claude-journal-tools
-gh repo clone askenter/claude-journal       ~/claude-journal
+```text
+/plugin marketplace add askenter/claude-journal-tools
+/plugin install claude-journal@claude-journal-tools
 ```
 
-Success: both directories exist and `git -C <each> status` runs cleanly.
+That registers the `Stop` and `SessionStart` hooks and the
+`/claude-journal:journal` skill. The hooks won't do anything useful until
+you point them at a data repo and name the device — the one-time setup
+below.
 
-### 2. Place the git-crypt key, then unlock
+## One-time per-device setup
 
-The agent cannot fabricate this key — the user must hand it over (e.g.
-pasted into the session, retrieved from their password manager via a
-separate skill, or copied from another device the agent has SSH access
-to). Once available:
+Tell the tools where your private data repo lives, then run the device init:
 
 ```bash
+export CLAUDE_JOURNAL_REPO_URL="git@github.com:<you>/claude-journal.git"
+
+git clone "$CLAUDE_JOURNAL_REPO_URL" ~/claude-journal
+
+# Place your git-crypt key (out-of-band, e.g. from your password manager):
 mkdir -p ~/.claude/journal && chmod 700 ~/.claude/journal
-install -m 600 /dev/stdin ~/.claude/journal/git-crypt.key  # paste key contents
+install -m 600 /dev/stdin ~/.claude/journal/git-crypt.key   # paste key, then Ctrl-D
 git -C ~/claude-journal git-crypt unlock ~/.claude/journal/git-crypt.key
+
+# Record this device's name (clones the repo if missing, retries the unlock):
+git clone git@github.com:askenter/claude-journal-tools.git ~/claude-journal-tools
+python3 ~/claude-journal-tools/tools/journal/init_device.py "$(hostname -s)"
 ```
 
-Success: `head -1 ~/claude-journal/raw/*/*/*.json 2>/dev/null` returns
-readable JSON, not binary garbage.
+`init_device.py` reads `CLAUDE_JOURNAL_REPO_URL` (or take `--repo-url`) and
+`CLAUDE_JOURNAL_PATH` (defaults to `~/claude-journal`). Re-running is safe.
 
-### 3. Run the device init script
+> If you are **not** using the plugin and want the hooks wired up the old
+> way (symlinks + `~/.claude/settings.json`), add `--register-hooks`. Do
+> **not** combine that with the plugin install or breadcrumbs push twice.
+
+### Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CLAUDE_JOURNAL_REPO_URL` | *(required)* | git URL of your private data repo |
+| `CLAUDE_JOURNAL_PATH` | `~/claude-journal` | local path of the data-repo clone |
+| `CLAUDE_JOURNAL_BUFFER` | `~/.claude/journal-buffer.jsonl` | offline breadcrumb backlog |
+
+## Unlocking the data repo
+
+The data repo is encrypted at rest with git-crypt. After cloning, transfer
+the symmetric key from your password manager to
+`~/.claude/journal/git-crypt.key` (`chmod 600`) and run:
 
 ```bash
-cd ~/claude-journal-tools
-python3 -m venv venv
-venv/bin/python -m pip install pytest
-./scripts/init-journal-device.sh "$(hostname -s)"
+git-crypt unlock ~/.claude/journal/git-crypt.key
 ```
 
-Success: `~/.claude/hooks/journal-on-stop.py` and `journal-on-start.py`
-are symlinks pointing into this repo, and `~/.claude/settings.json`
-lists them under both `Stop` and `SessionStart` hook arrays.
+Without this, `raw/`, `digests/`, `memories/`, `skills/`, `proposals/`, and
+`state/` are ciphertext on disk. The Stop hook still pushes safely (writes
+are re-encrypted by git filters), but pulled memories and proposals are
+unreadable, and the SessionStart hook prints a loud warning.
 
-### 4. Smoke-test the hooks
+## Smoke-test
 
-End any current Claude Code session and start a new one. The
-SessionStart hook should pull `~/claude-journal` silently. End that new
-session; the Stop hook should write
+Start a new Claude Code session (SessionStart pulls your data repo silently),
+then end it. The Stop hook should write
 `~/claude-journal/raw/<device>/<YYYY-MM-DD>/<session_id>.json` and
-`.transcript.md`, then commit and push.
+`.transcript.md`, then commit and push:
 
 ```bash
 ls -lt ~/claude-journal/raw/$(cat ~/.claude/journal/device-name)/$(date -u +%F)/ | head
 ```
 
-If the breadcrumb is missing, run `pytest tests/journal/` and check for
-hook errors in `~/.claude/journal/hook-errors.log`.
-
-### 5. Schedule the nightly consolidator
-
-Continue to the next section. The consolidator only needs to be
-scheduled **once per user account** (it runs in Anthropic's cloud, not
-on this device), so skip this step on additional devices.
+If the breadcrumb is missing, run `pytest tests/journal/` and check
+`~/.claude/journal-buffer.log` for hook errors.
 
 ---
 
 ## Phase 2 consolidator via `/schedule`
 
-The nightly consolidator is a Claude Code routine — a scheduled remote
-agent created with the built-in `/schedule` slash command. Its prompt
-lives at `~/claude-journal/consolidator/ROUTINE.md` and it expects a
-base64-encoded git-crypt key in the environment variable
-`GIT_CRYPT_KEY_B64`.
-
-### Creating the routine from the CLI
-
-`/schedule` takes free-form natural language, not positional arguments.
-An agent should describe what to run and when in one sentence:
+The nightly consolidator is a Claude Code routine created with the built-in
+`/schedule` slash command. Its prompt lives at
+`~/claude-journal/consolidator/ROUTINE.md` and it expects a base64-encoded
+git-crypt key in the environment variable `GIT_CRYPT_KEY_B64`. It only needs
+to be scheduled **once per account** (it runs in Anthropic's cloud, not on a
+device).
 
 ```bash
 claude -p --bare \
@@ -163,67 +142,56 @@ claude -p --bare \
 that runs at 03:30 in my local timezone. The routine prompt is the \
 contents of ~/claude-journal/consolidator/ROUTINE.md. It needs the \
 environment variable GIT_CRYPT_KEY_B64 set to <BASE64_KEY> and should \
-clone https://github.com/askenter/claude-journal before running."
+clone <your data-repo URL> before running."
 ```
 
 Replace `<BASE64_KEY>` with `base64 -w0 ~/.claude/journal/git-crypt.key`
-output (treat that string the same as the raw key — never echo it to
-shared logs). Drop `-w0` on macOS where `base64` wraps by default with
-no flag.
+output (treat it as secret — never echo it to shared logs; drop `-w0` on
+macOS).
 
-> **Schedule timing — read this.** The routine treats "target date" as
-> *yesterday in UTC*. Pick a local time that is unambiguously past UTC
-> midnight year-round, including DST shifts, or you will get
-> off-by-one digests. For Europe/Athens (UTC+2/+3) anything ≥ 03:00
-> local is safe; for Pacific timezones any time after 17:00 PST works.
-
-### Verifying and editing the routine
+> **Schedule timing.** The routine treats "target date" as *yesterday in
+> UTC*. Pick a local time unambiguously past UTC midnight year-round
+> (including DST) or you get off-by-one digests. For Europe/Athens (UTC+2/+3)
+> anything ≥ 03:00 local is safe; for Pacific timezones any time after 17:00
+> PST works.
 
 ```bash
-# List routines visible to this account
-claude -p --bare "/schedule list"
-
-# Open one for inspection or edits (cron expression, prompt body, env)
-claude -p --bare "/schedule update journal-consolidator"
+claude -p --bare "/schedule list"                         # list routines
+claude -p --bare "/schedule update journal-consolidator"  # edit cron/prompt/env
 ```
-
-If `/schedule create` returns a non-cron cadence (e.g. "daily at 3:30am
-local") and the agent needs a precise cron expression, follow up with
-`/schedule update` — that path supports raw cron syntax (minimum
-1-hour interval).
-
-### Where routines live on disk
-
-- **Source of truth:** the user's Anthropic cloud account, viewable at
-  `claude.ai/code/routines`.
-- **Local cache:** `~/.claude/scheduled-tasks/<routine-name>/SKILL.md`,
-  editable for prompt tweaks; the cloud copy still wins on conflicts.
-
-To remove a routine, the agent can use `/schedule delete
-journal-consolidator` from the CLI, or delete it from the web console.
 
 ### What the routine produces
 
-After it runs successfully, the data repo gains:
+After a successful run the data repo gains:
 
 - `digests/<YYYY-MM-DD>/<device>.md` — per-device daily digest
-- `memories/<project-key>/*.md` — distilled per-project memories (also
-  auto-copied into `~/.claude/projects/<project>/memory/` on next
-  SessionStart)
+- `memories/<project-key>/*.md` — distilled per-project memories (auto-copied
+  into `~/.claude/projects/<project>/memory/` on next SessionStart)
 - `skills/*` — distilled reusable skills
-- `proposals/<YYYY-MM-DD>-<project-key>.md` — pending feedback /
-  CLAUDE.md proposals, surfaced at SessionStart and resolved via
-  `/journal accept|skip|edit` (see `skills/journal/SKILL.md`).
+- `proposals/<YYYY-MM-DD>-<project-key>.md` — pending feedback / CLAUDE.md
+  proposals, surfaced at SessionStart and resolved via
+  `/claude-journal:journal accept|skip|edit` (see `skills/journal/SKILL.md`).
 
 ---
 
-## Updating the pipeline on existing devices
+## Updating
 
 ```bash
-git -C ~/claude-journal-tools pull
-git -C ~/claude-journal       pull
+# Plugin install: update via the marketplace
+/plugin marketplace update claude-journal-tools
+
+# Data repo:
+git -C ~/claude-journal pull
 ```
 
-Hooks update automatically because `~/.claude/hooks/journal-*.py` are
-symlinks into the tools repo. No re-install needed unless the init
-script itself changes (in which case re-run it; it's idempotent).
+## Development
+
+```bash
+git clone git@github.com:askenter/claude-journal-tools.git
+cd claude-journal-tools
+python3 -m venv venv && venv/bin/python -m pip install pytest
+venv/bin/python -m pytest tests/journal/
+```
+
+The `venv` is only for running the test suite — the shipped hooks and tools
+import nothing outside the standard library.
