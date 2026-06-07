@@ -82,9 +82,9 @@ ever join. (For automation, back it up out-of-band and pass `--key-backed-up`.)
 
 Already have a data repo? Skip this section.
 
-> Creating the cloud `/schedule` routine remains a deliberate manual step —
-> see [Phase 2 consolidator](#phase-2-consolidator-via-schedule). Bootstrap
-> only seeds the `ROUTINE.md` prompt the routine reads.
+> Bootstrap only seeds the `ROUTINE.md` prompt; it does not create the cloud
+> routine. After your devices are set up, run `/claude-journal:journal-schedule`
+> once to create it — see [Phase 2 consolidator](#phase-2-consolidator-via-schedule).
 
 ## One-time per-device setup
 
@@ -158,6 +158,19 @@ git-crypt key in the environment variable `GIT_CRYPT_KEY_B64`. It only needs
 to be scheduled **once per account** (it runs in Anthropic's cloud, not on a
 device).
 
+**Recommended — let Claude create it** (idempotent, UTC-safe, confirms first):
+
+```text
+/claude-journal:journal-schedule
+```
+
+The skill checks whether a `journal-consolidator` routine already exists,
+picks a DST-safe run time, shows you exactly what it'll create, and only
+fires after you confirm. It passes the key via a shell `$(base64 …)`
+substitution so the secret never lands in the transcript.
+
+<details><summary>Manual equivalent (what the skill runs under the hood)</summary>
+
 ```bash
 claude -p --bare \
   --allowedTools "Bash,Read" \
@@ -171,6 +184,8 @@ clone <your data-repo URL> before running."
 Replace `<BASE64_KEY>` with `base64 -w0 ~/.claude/journal/git-crypt.key`
 output (treat it as secret — never echo it to shared logs; drop `-w0` on
 macOS).
+
+</details>
 
 > **Schedule timing.** The routine treats "target date" as *yesterday in
 > UTC*. Pick a local time unambiguously past UTC midnight year-round
