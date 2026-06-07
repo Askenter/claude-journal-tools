@@ -38,8 +38,9 @@ Runtime is **Python 3.11+, standard library only** — no `pip install`, no
 ## Requirements
 
 - `git`, `git-crypt`, `python3.11+` on `PATH`
-- A **private** GitHub (or other git host) repo to use as your data store
-- A git-crypt symmetric key, stored at `~/.claude/journal/git-crypt.key`
+- `gh` (authenticated) — only if you let the bootstrap create the GitHub repo
+- A **private** data repo + a git-crypt key. You can create both in one step
+  with `bootstrap-journal-repo.sh` (below), or bring your own.
 
 Install git-crypt:
 
@@ -58,24 +59,46 @@ Install git-crypt:
 
 That registers the `Stop` and `SessionStart` hooks and the
 `/claude-journal:journal` skill. The hooks won't do anything useful until
-you point them at a data repo and name the device — the one-time setup
-below.
+you create a data repo and name the device — the two one-time steps below.
+
+## Create your data repo (once, ever — first device only)
+
+If you don't already have a `claude-journal` data repo, bootstrap one. This
+creates the private GitHub repo, lays out the encrypted directory skeleton,
+initializes git-crypt, **generates your key**, and seeds a generic
+`consolidator/ROUTINE.md`:
+
+```bash
+git clone git@github.com:askenter/claude-journal-tools.git ~/claude-journal-tools
+~/claude-journal-tools/scripts/bootstrap-journal-repo.sh --repo <you>/claude-journal
+# or, to wire the remote up yourself:  ... --no-remote
+```
+
+The bootstrap **stops and prints your git-crypt key**, requiring you to
+acknowledge you've saved it before any remote is created. **Save it in your
+password manager immediately** — lose this key and every transcript, memory,
+and proposal in the repo is permanently unreadable, and no new device can
+ever join. (For automation, back it up out-of-band and pass `--key-backed-up`.)
+
+Already have a data repo? Skip this section.
+
+> Creating the cloud `/schedule` routine remains a deliberate manual step —
+> see [Phase 2 consolidator](#phase-2-consolidator-via-schedule). Bootstrap
+> only seeds the `ROUTINE.md` prompt the routine reads.
 
 ## One-time per-device setup
 
-Tell the tools where your private data repo lives, then run the device init:
+On **each** device, point the tools at your data repo and name the device:
 
 ```bash
 export CLAUDE_JOURNAL_REPO_URL="git@github.com:<you>/claude-journal.git"
 
-git clone "$CLAUDE_JOURNAL_REPO_URL" ~/claude-journal
-
-# Place your git-crypt key (out-of-band, e.g. from your password manager):
+# On the device that ran the bootstrap, the repo already exists locally and
+# is unlocked. On *additional* devices, place the key first (out-of-band):
 mkdir -p ~/.claude/journal && chmod 700 ~/.claude/journal
 install -m 600 /dev/stdin ~/.claude/journal/git-crypt.key   # paste key, then Ctrl-D
-git -C ~/claude-journal git-crypt unlock ~/.claude/journal/git-crypt.key
 
-# Record this device's name (clones the repo if missing, retries the unlock):
+# Clones the repo if missing, attempts the git-crypt unlock, records the name:
 git clone git@github.com:askenter/claude-journal-tools.git ~/claude-journal-tools
 python3 ~/claude-journal-tools/tools/journal/init_device.py "$(hostname -s)"
 ```
