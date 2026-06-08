@@ -105,8 +105,8 @@ The journal is **personal and private — it does not leave the machine.**
    See a "pending proposals" reminder?
         → tell the user; act only when they run /journal accept|skip|edit.
 
-   Asked to set up the pipeline?  → /journal-setup
-   Asked to schedule the nightly routine?  → /journal-schedule
+   Asked to set up the pipeline?  → /journal setup
+   Asked to schedule the nightly routine?  → /journal schedule
 
    Tempted to grep ~/claude-journal/raw/ ?
         → stop. That's the consolidator's input, not your source.

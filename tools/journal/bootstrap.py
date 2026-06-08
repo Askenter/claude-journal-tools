@@ -105,15 +105,15 @@ def _require_git_identity() -> None:
 
     Otherwise the init commit aborts with 'empty ident name' on fresh
     machines/VMs/containers — *after* the repo, skeleton, git-crypt state and
-    the exported key already exist — leaving the user wedged. The journal-setup
-    skill sets this interactively; here we only validate."""
+    the exported key already exist — leaving the user wedged. The `/journal
+    setup` flow sets this interactively; here we only validate."""
     if not _git_identity_configured():
         raise SystemExit(
             "git has no commit identity configured — the init commit would "
             "fail and leave a half-initialized repo behind. Set it first:\n"
             '  git config --global user.name "Your Name"\n'
             '  git config --global user.email "you@example.com"\n'
-            "(or run /claude-journal:journal-setup, which does this for you)."
+            "(or run /journal setup, which does this for you)."
         )
 
 
@@ -130,7 +130,7 @@ def _require_gh_auth() -> None:
         raise SystemExit(
             "gh is installed but not authenticated — `gh repo create` would "
             "fail. Run `gh auth login` first (or run "
-            "/claude-journal:journal-setup, which prompts you to sign in)."
+            "/journal setup, which prompts you to sign in)."
         )
 
 
@@ -272,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
         "  1. set CLAUDE_JOURNAL_REPO_URL to this repo's URL and run\n"
         "     tools/journal/init_device.py <device-name> on each device.\n"
         "  2. once devices are set up, create the nightly cloud routine with\n"
-        "     /claude-journal:journal-schedule (once per account)."
+        "     /journal schedule (once per account)."
     )
     return 0
 

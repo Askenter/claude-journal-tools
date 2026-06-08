@@ -20,7 +20,7 @@ This v6 version writes:
 > **This file is the seeded starting template.** `journal-bootstrap` copies it
 > into your data repo at `consolidator/ROUTINE.md`, which is the source of
 > truth for the routine's prompt. Tune the distillation rules to your taste,
-> then re-paste the updated body into the cloud routine (run `/journal-schedule`,
+> then re-paste the updated body into the cloud routine (run `/journal schedule`,
 > or `/schedule update journal-consolidator`).
 
 ## Inputs

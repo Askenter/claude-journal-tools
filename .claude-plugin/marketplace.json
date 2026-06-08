@@ -9,7 +9,7 @@
     {
       "name": "claude-journal",
       "source": ".",
-      "description": "Per-device journal hooks + the /journal proposal-resolution skill. Pushes session breadcrumbs to your own encrypted claude-journal data repo.",
+      "description": "Per-device journal hooks + the /journal command (setup, schedule, accept/skip/edit). Pushes session breadcrumbs to your own encrypted claude-journal data repo.",
       "license": "MIT"
     }
   ]

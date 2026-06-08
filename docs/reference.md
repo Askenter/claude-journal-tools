@@ -257,15 +257,18 @@ The SessionStart hook returns context to Claude by writing this JSON to stdout:
 
 ## Skills
 
-| Skill | Invoke | What it does |
-| --- | --- | --- |
-| `journal` | `/journal accept` · `/journal skip` · `/journal edit` | resolve pending proposals for the current project |
-| `journal-setup` | `/journal-setup` | interactive first-time data-repo bootstrap (tools, git identity, `gh` sign-in, then runs the bootstrap) |
-| `journal-schedule` | `/journal-schedule` | create the once-per-account consolidator routine via `/schedule` — asks cadence (1+ runs/day), idempotent, DST-safe |
+One skill, `journal`, dispatches on the first word of its argument. Each action
+has its own flow under `skills/journal/references/`.
 
-> Skill names are bare (`/journal-setup`). Under the hood the plugin namespaces
-> them as `claude-journal:<name>`; the bare form works when there's no collision,
-> the qualified form always disambiguates.
+| Action | Invoke | What it does |
+| --- | --- | --- |
+| `setup` | `/journal setup` | interactive first-time data-repo bootstrap (tools, git identity, `gh` sign-in, the cloud routine's GitHub token, then runs the bootstrap) |
+| `schedule` | `/journal schedule` | create/update the once-per-account consolidator routine via `/schedule` — asks cadence (1+ runs/day), idempotent, DST-safe |
+| `accept` · `skip` · `edit` | `/journal accept` · `/journal skip` · `/journal edit` | resolve pending proposals for the current project |
+
+> The command is bare `/journal`. Under the hood the plugin namespaces it as
+> `claude-journal:journal`; the bare form works when there's no collision, the
+> qualified form always disambiguates.
 
 ## Plugin & marketplace identifiers
 

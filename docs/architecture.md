@@ -93,8 +93,8 @@ This phase runs **no LLM** — it is pure data collection, fast and offline-safe
 
 ### Phase 2 — Consolidate (in the cloud, once per account, at least nightly)
 
-A single Claude Code **routine** created with `/schedule` (see the
-`/journal-schedule` skill). Its prompt is `consolidator/ROUTINE.md` in the data
+A single Claude Code **routine** created with `/schedule` (see
+`/journal schedule`). Its prompt is `consolidator/ROUTINE.md` in the data
 repo (kept plaintext so the routine can read it from a fresh checkout). It runs
 nightly by default — and may be scheduled several times a day, since every
 output is an idempotent upsert (re-running a day refreshes, never duplicates).

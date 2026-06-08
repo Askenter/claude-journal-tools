@@ -46,9 +46,10 @@ claude-journal-tools/
 
 Skills shipped under `skills/`:
 
-- `journal/` — resolve pending consolidation proposals via accept, skip, or edit
-- `journal-setup/` — guided first-time setup that bootstraps your data repo
-- `journal-schedule/` — create the nightly Phase 2 consolidator routine via `/schedule`
+- `journal/` — one command, three actions (the flows live in `journal/references/`):
+  - `/journal setup` — guided first-time bootstrap of your data repo
+  - `/journal schedule` — create/update the nightly Phase 2 consolidator routine via `/schedule`
+  - `/journal accept|skip|edit` — resolve pending consolidation proposals
 
 Runtime is **Python 3.11+, standard library only** — no `pip install`, no
 `node_modules`. The hooks run under whatever `python3` is on your `PATH`.
@@ -77,10 +78,10 @@ Install git-crypt:
 /plugin install claude-journal@claude-journal-tools
 ```
 
-That registers the `Stop` and `SessionStart` hooks and the
-`/journal`, `/journal-setup`, and
-`/journal-schedule` skills. The hooks won't do anything useful
-until you create a data repo and name the device — the two one-time steps below.
+That registers the `Stop` and `SessionStart` hooks and the single `/journal`
+command (`setup`, `schedule`, `accept`/`skip`/`edit`). The hooks won't do
+anything useful until you create a data repo and name the device — the two
+one-time steps below.
 
 ## Create your data repo (once, ever — first device only)
 
@@ -89,7 +90,7 @@ creates the private GitHub repo, lays out the encrypted directory skeleton,
 initializes git-crypt, **generates your key**, and seeds a generic
 `consolidator/ROUTINE.md`.
 
-**Easiest path:** run `/journal-setup`. It checks your tools,
+**Easiest path:** run `/journal setup`. It checks your tools,
 sets your git identity, signs you into `gh` if a remote is wanted, then walks
 you through the bootstrap below (the key stays in your terminal, never the
 transcript). Prefer the manual route? It's exactly what the skill runs:
@@ -109,7 +110,7 @@ ever join. (For automation, back it up out-of-band and pass `--key-backed-up`.)
 Already have a data repo? Skip this section.
 
 > Bootstrap only seeds the `ROUTINE.md` prompt; it does not create the cloud
-> routine. After your devices are set up, run `/journal-schedule`
+> routine. After your devices are set up, run `/journal schedule`
 > once to create it — see [Phase 2 consolidator](#phase-2-consolidator-via-schedule).
 
 ## One-time per-device setup
@@ -190,14 +191,14 @@ Read and write on that repo) in `GH_TOKEN`. It only needs to be scheduled
 **Recommended — let Claude create it** (idempotent, UTC-safe, confirms first):
 
 ```text
-/journal-schedule
+/journal schedule
 ```
 
 The skill checks whether a `journal-consolidator` routine already exists,
 asks how many times a day to run, picks a DST-safe run time, shows you
 exactly what it'll create, and only fires after you confirm. It passes the
 key and the GitHub token via shell `$(…)` substitutions so neither secret ever
-lands in the transcript. (`/journal-setup` Step 4b mints and stores that token
+lands in the transcript. (`/journal setup` Step 4b mints and stores that token
 at `~/.claude/journal/gh-token`.)
 
 <details><summary>Manual equivalent (what the skill runs under the hood)</summary>
@@ -269,7 +270,7 @@ the installed plugin:
 
 Prefer hands-off? Enable auto-update once — `/plugin` → **Marketplaces** →
 `claude-journal-tools` → **Enable auto-update** (third-party marketplaces have it
-**off by default**). `/journal-setup` also offers to turn this on during setup.
+**off by default**). `/journal setup` also offers to turn this on during setup.
 
 > New releases only appear when the **version** is bumped in
 > `.claude-plugin/plugin.json` — pushing commits without a version bump is not

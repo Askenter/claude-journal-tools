@@ -1,7 +1,8 @@
----
-name: journal-schedule
-description: Use when the user runs `/journal-schedule` (or asks to "create/schedule the journal consolidator routine"). Creates the once-per-account nightly Phase 2 consolidator routine via Claude Code's `/schedule`, idempotently and with a confirmation gate. Run this once, after bootstrapping the data repo.
----
+# `/journal schedule` — create/update the consolidator routine
+
+> Reference for the `journal` skill's `schedule` action. The user reached here
+> by running `/journal schedule` (or asking to create/update the consolidator
+> routine). Follow it exactly.
 
 You are setting up the **consolidator routine** — the once-per-account
 Phase 2 step that runs in Anthropic's cloud, distilling every device's
@@ -16,7 +17,7 @@ without ever leaking the git-crypt key into the transcript.
 ## Preconditions (check first, bail clearly if unmet)
 
 The data repo must already exist and be initialized (run
-`/journal-setup`, or the bootstrap directly, first).
+`/journal setup`, or the bootstrap directly, first).
 Verify, and stop with a specific message if any fails:
 
 1. `~/claude-journal/consolidator/ROUTINE.md` exists (the routine's prompt
@@ -26,7 +27,7 @@ Verify, and stop with a specific message if any fails:
 3. `CLAUDE_JOURNAL_REPO_URL` is set (or discoverable via
    `git -C ~/claude-journal remote get-url origin`) — the routine clones it.
 4. `~/.claude/journal/gh-token` exists — the GitHub token the cloud routine
-   uses to clone **and push** the private repo (created by `/journal-setup`
+   uses to clone **and push** the private repo (created by `/journal setup`
    Step 4b). The cloud has no SSH key, no `gh`, and no token of its own, so
    without this the routine fails at clone with `could not read Username for
    github.com`. The repo exists by now, so verify the token actually has
@@ -38,7 +39,7 @@ Verify, and stop with a specific message if any fails:
      gh api repos/<owner>/<repo> --jq '.permissions.push'
    ```
 
-   Stop if the file is missing (send them back to `/journal-setup` Step 4b) or
+   Stop if the file is missing (send them back to `/journal setup` Step 4b) or
    if push is not `true` (the token lacks **Contents: Read and write** on the
    repo, or names the wrong repo). Never echo the token.
 

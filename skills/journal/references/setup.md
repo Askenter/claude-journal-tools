@@ -1,7 +1,8 @@
----
-name: journal-setup
-description: Use when the user runs `/journal-setup` (or asks to "bootstrap / set up the claude-journal data repo for the first time"). Interactive front door for first-time data-repo creation — checks tools, configures git identity, signs into gh when a remote is wanted, then drives the bootstrap and points to next steps. Run this once, before adding any device.
----
+# `/journal setup` — first-time data-repo bootstrap
+
+> Reference for the `journal` skill's `setup` action. The user reached here by
+> running `/journal setup` (or asking to bootstrap the claude-journal data repo
+> for the first time). Follow it exactly.
 
 You are doing the **one-time, first-machine setup** of a brand-new
 `claude-journal` *data* repo. `tools/journal/bootstrap.py` is the dumb,
@@ -30,7 +31,7 @@ Before anything, look for an existing setup and stop if found:
    repo is already bootstrapped. Tell the user, show its remote
    (`git -C <path> remote -v`), and stop — point them at
    `tools/journal/init_device.py` (to add *this* device) or
-   `/journal-schedule` (to create the consolidator routine) instead.
+   `/journal schedule` (to create the consolidator routine) instead.
 2. If `~/.claude/journal/git-crypt.key` already exists but the data repo does
    not, this is probably an *additional* device, not a first bootstrap — the
    key was placed out-of-band. Do **not** run bootstrap (it would refuse
@@ -114,7 +115,7 @@ The consolidator runs in Anthropic's cloud, which has **no** SSH key, **no**
 `gh`, and **no** token of its own — and the data repo is private. The routine
 both **clones and pushes** that repo, so it needs a GitHub token with **write**
 access provisioned into its environment (the same way the git-crypt key is).
-Capture it now; `/journal-schedule` injects it later. Without this, the routine
+Capture it now; `/journal schedule` injects it later. Without this, the routine
 fails at its very first step with `could not read Username for github.com`.
 
 Use a **fine-grained personal access token** scoped to only this one repo — the
@@ -145,7 +146,7 @@ hidden and nothing echoes the token:
 behaves the same in bash and zsh — `read -p` means something different in zsh.)
 
 Confirm the token authenticates **without printing it** (a repo-scoped push
-check can't run yet — the repo doesn't exist until Step 6, so `/journal-schedule`
+check can't run yet — the repo doesn't exist until Step 6, so `/journal schedule`
 does that check later):
 
 ```bash
@@ -236,7 +237,7 @@ Once verified, tell the user the two remaining steps (do not run them here):
    `tools/journal/init_device.py <device-name>`. Additional devices need the
    git-crypt key placed first, out-of-band (see README).
 2. **Create the consolidator routine, once per account**, with
-   `/journal-schedule`. It asks **how many times a day** to run — default is
+   `/journal schedule`. It asks **how many times a day** to run — default is
    once (nightly); pick more only if you want distilled output to reach your
    other devices faster during the day (runs must be ≥1h apart and stay under
    your per-account daily run cap of ≈15) — then it picks a DST-safe time. It
@@ -250,7 +251,7 @@ copy is the **source of truth** for what the routine does — distilling
 digests, memories, skill proposals, and CLAUDE.md-edit proposals. Tell the
 user they can **edit it** to tune the distillation rules (or swap in their own
 prompt entirely); after any edit they re-paste the body into the cloud routine
-via `/journal-schedule` (or `/schedule update journal-consolidator`), since the
+via `/journal schedule` (or `/schedule update journal-consolidator`), since the
 cloud config holds a copy that must be kept in sync.
 
 ## Guardrails

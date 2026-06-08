@@ -9,6 +9,22 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.4.0] — 2026-06-08
+
+### Changed
+- **One `/journal` command instead of three skills (breaking).** The separate
+  `journal-setup` and `journal-schedule` skills are gone; their flows are now
+  subcommands of the single `journal` skill, which dispatches on the first word
+  of its argument:
+  - `/journal setup` (was `/journal-setup`)
+  - `/journal schedule` (was `/journal-schedule`)
+  - `/journal accept` / `skip` / `edit` (unchanged)
+
+  Each flow lives in `skills/journal/references/{setup,schedule,resolve}.md`;
+  `skills/journal/SKILL.md` is now a thin router. This drops the redundant
+  `claude-journal:journal-setup` naming (where "journal" appeared twice).
+  Update any muscle memory or scripts that called the old hyphenated commands.
+
 ## [0.3.0] — 2026-06-08
 
 ### Added

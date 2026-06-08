@@ -22,7 +22,7 @@ are per-account; the last two repeat per device.
 - `git`, `git-crypt`, and `python3.11+` on `PATH`
 - `gh` (authenticated) — only if you let the bootstrap create the GitHub repo
 - A configured git identity (`user.name` / `user.email`) — the bootstrap's
-  first commit needs it. The `/journal-setup` skill checks and sets this for you.
+  first commit needs it. `/journal setup` checks and sets this for you.
 
 Install `git-crypt`:
 
@@ -39,9 +39,9 @@ Install `git-crypt`:
 /plugin install claude-journal@claude-journal-tools
 ```
 
-This registers the `Stop` and `SessionStart` hooks and the `/journal`,
-`/journal-setup`, and `/journal-schedule` skills. The hooks do nothing useful
-until you create a data repo and name the device (steps 2–3).
+This registers the `Stop` and `SessionStart` hooks and the single `/journal`
+command (`setup`, `schedule`, `accept`/`skip`/`edit`). The hooks do nothing
+useful until you create a data repo and name the device (steps 2–3).
 
 ## Step 2 — Bootstrap the data repo (first device only)
 
@@ -53,7 +53,7 @@ consolidator prompt.
 you into `gh` if needed, then walks you through the bootstrap):
 
 ```text
-/journal-setup
+/journal setup
 ```
 
 **Manual equivalent** — exactly what the skill runs under the hood:
@@ -119,7 +119,7 @@ Anthropic's cloud, **once for your whole account** (not per device).
 time, confirms first, keeps the key out of the transcript):
 
 ```text
-/journal-schedule
+/journal schedule
 ```
 
 It checks whether a `journal-consolidator` routine already exists, asks **how
@@ -129,8 +129,8 @@ it will create, and only fires after you confirm.
 > **Private-repo auth.** The routine clones and pushes your **private** data
 > repo from Anthropic's cloud, which has no SSH key or `gh`. It therefore needs
 > a fine-grained GitHub token (Contents: Read and write on the repo), which
-> `/journal-setup` mints and stores at `~/.claude/journal/gh-token` and
-> `/journal-schedule` injects as `GH_TOKEN`. Without it the run dies at clone
+> `/journal setup` mints and stores at `~/.claude/journal/gh-token` and
+> `/journal schedule` injects as `GH_TOKEN`. Without it the run dies at clone
 > with `could not read Username for github.com`.
 
 > **How often?** Once a day (nightly) is the default and right for most people.
@@ -191,7 +191,7 @@ You should see `<session_id>.json` and `<session_id>.transcript.md`.
 | **LOCKED** warning at SessionStart | git-crypt key not applied | `git-crypt unlock ~/.claude/journal/git-crypt.key` |
 | **STALE** warning at SessionStart | pull failed (dirty tree / divergence) | check the log; `git -C ~/claude-journal status` |
 | Breadcrumbs pushed twice | plugin **and** `--register-hooks` both active | remove the manual hooks from `~/.claude/settings.json` |
-| Bootstrap aborts on `git commit` | no git identity configured | `git config --global user.name/user.email`, or use `/journal-setup` |
+| Bootstrap aborts on `git commit` | no git identity configured | `git config --global user.name/user.email`, or use `/journal setup` |
 | `init_device.py` errors on repo URL | `CLAUDE_JOURNAL_REPO_URL` unset | `export` it, or pass `--repo-url` |
 | Consolidator never produces output | routine not scheduled, or branch-push blocked | `/schedule list`; enable unrestricted branch pushes on the data repo |
 
