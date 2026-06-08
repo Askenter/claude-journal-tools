@@ -9,6 +9,15 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.2.1] — 2026-06-08
+
+### Fixed
+- **Plugin install no longer fails with a duplicate-hooks error.** Removed the
+  redundant `hooks` field from `.claude-plugin/plugin.json`. The standard
+  `hooks/hooks.json` is auto-discovered, so naming it in the manifest loaded the
+  same file twice and aborted hook registration at install time. SessionStart
+  and Stop hooks now load cleanly via auto-discovery.
+
 ## [0.2.0] — 2026-06-08
 
 Turnkey setup, skills-as-proposals, and full documentation.
