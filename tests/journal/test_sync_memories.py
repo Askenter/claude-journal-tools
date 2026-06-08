@@ -111,6 +111,29 @@ def test_sync_does_not_duplicate_index_entries_on_resync(tmp_path: Path):
     assert text.count("[Fact](fact.md)") == 1
 
 
+def test_sync_dedupes_when_link_text_contains_parens(tmp_path: Path):
+    """Regression: an index entry whose link TEXT contains parentheses (e.g. a
+    `(date)`) must still dedupe on resync. The dedupe key is the link TARGET —
+    the part after `](` — not the first parenthesized group, which would be the
+    date and never match, re-appending the line every SessionStart."""
+    journal_dir = tmp_path / "journal" / "memories" / "p"
+    device_dir = tmp_path / "device" / "memory"
+    _write_memory(journal_dir, "pull-push-fix.md")
+    _write_index(journal_dir, "p", [
+        "- [pull.py and push.py — fixes (2026-05-01)](pull-push-fix.md) — details",
+    ])
+
+    for _ in range(3):  # three SessionStarts
+        sync_project_memories(
+            journal_project_dir=journal_dir,
+            device_project_memory_dir=device_dir,
+            project="p",
+        )
+
+    text = (device_dir / "MEMORY.md").read_text()
+    assert text.count("(pull-push-fix.md)") == 1
+
+
 def test_sync_overwrites_journal_owned_files_when_content_changes(tmp_path: Path):
     """A memory file that was originally placed by a sync should be updated
     when the journal version changes (otherwise consolidated facts go
