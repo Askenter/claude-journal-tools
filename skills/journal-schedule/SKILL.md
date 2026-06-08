@@ -1,6 +1,6 @@
 ---
 name: journal-schedule
-description: Use when the user runs `/claude-journal:journal-schedule` (or asks to "create/schedule the journal consolidator routine"). Creates the once-per-account nightly Phase 2 consolidator routine via Claude Code's `/schedule`, idempotently and with a confirmation gate. Run this once, after bootstrapping the data repo.
+description: Use when the user runs `/journal-schedule` (or asks to "create/schedule the journal consolidator routine"). Creates the once-per-account nightly Phase 2 consolidator routine via Claude Code's `/schedule`, idempotently and with a confirmation gate. Run this once, after bootstrapping the data repo.
 ---
 
 You are setting up the **nightly consolidator routine** — the once-per-account
@@ -13,7 +13,7 @@ ever leaking the git-crypt key into the transcript.
 ## Preconditions (check first, bail clearly if unmet)
 
 The data repo must already exist and be initialized (run
-`/claude-journal:journal-setup`, or the bootstrap directly, first).
+`/journal-setup`, or the bootstrap directly, first).
 Verify, and stop with a specific message if any fails:
 
 1. `~/claude-journal/consolidator/ROUTINE.md` exists (the routine's prompt

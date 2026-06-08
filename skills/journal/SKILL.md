@@ -1,6 +1,6 @@
 ---
 name: journal
-description: Use when the user runs the journal slash command with `accept`, `skip`, or `edit` (e.g. `/claude-journal:journal accept`) to act on pending claude-journal proposals (feedback memories or CLAUDE.md edits surfaced at SessionStart).
+description: Use when the user runs the journal slash command with `accept`, `skip`, or `edit` (e.g. `/journal accept`) to act on pending claude-journal proposals (feedback memories or CLAUDE.md edits surfaced at SessionStart).
 ---
 
 You are handling a journal slash-command invocation. The journal pipeline
