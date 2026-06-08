@@ -42,6 +42,11 @@ Turnkey setup, skills-as-proposals, and full documentation.
 - Corrected the README update instructions: upgrading the plugin needs both
   `/plugin marketplace update` **and** `/plugin update` (the first alone only
   refreshes the marketplace, it does not install the new version).
+- `sync_memories` no longer duplicates a project's `MEMORY.md` index entry on
+  every SessionStart when the entry's link text contains parentheses (e.g. a
+  `(date)`). The dedupe now keys on the markdown link **target** (`](file.md)`)
+  rather than the first parenthetical, which was matching the title's date and
+  never the filename — appending one duplicate per sync.
 
 ### Changed
 - Skills are referenced by their bare names (`/journal`, `/journal-setup`,
