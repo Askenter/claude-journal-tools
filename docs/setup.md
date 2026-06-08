@@ -126,6 +126,13 @@ It checks whether a `journal-consolidator` routine already exists, asks **how
 many times a day** to run, computes a UTC-safe run time, shows you exactly what
 it will create, and only fires after you confirm.
 
+> **Private-repo auth.** The routine clones and pushes your **private** data
+> repo from Anthropic's cloud, which has no SSH key or `gh`. It therefore needs
+> a fine-grained GitHub token (Contents: Read and write on the repo), which
+> `/journal-setup` mints and stores at `~/.claude/journal/gh-token` and
+> `/journal-schedule` injects as `GH_TOKEN`. Without it the run dies at clone
+> with `could not read Username for github.com`.
+
 > **How often?** Once a day (nightly) is the default and right for most people.
 > Run it more frequently only if you want distilled output to reach your other
 > devices sooner during the day — runs must be **≥1h apart** (Anthropic's

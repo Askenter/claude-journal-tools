@@ -9,6 +9,36 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.3.0] — 2026-06-08
+
+### Added
+- **The cloud consolidator now provisions its own GitHub credential.**
+  `/journal-setup` gained Step 4b, which walks you through minting a
+  fine-grained personal access token (scoped to the data repo, Contents: Read
+  and write), stores it at `~/.claude/journal/gh-token` without echoing the
+  value, and verifies it authenticates. The token is captured at setup and
+  injected into the routine at schedule time.
+- **`/journal-schedule` injects `GH_TOKEN`** alongside the git-crypt key and
+  clones the private repo over HTTPS with the token
+  (`https://x-access-token:$GH_TOKEN@github.com/<owner>/<repo>.git`); the same
+  credential authenticates the routine's `git push`. A new precondition
+  verifies the token has push access before scheduling.
+
+### Fixed
+- **The nightly routine no longer dies at clone in environments with no GitHub
+  auth** (Claude Code on the web, headless cloud runs). It previously received
+  only `GIT_CRYPT_KEY_B64`, which decrypts contents but is not a transport
+  credential, so cloning the **private** data repo failed with `could not read
+  Username for github.com` before git-crypt ever ran. A device's local SSH key
+  and `gh` login do not propagate to the cloud.
+
+### Security
+- The new `GH_TOKEN` and the token embedded in the clone URL get the same
+  write-once, never-echo handling as the git-crypt key. `ROUTINE.md` now warns
+  against printing `remote.origin.url` (it carries the token) and requires
+  scrubbing `https://x-access-token:…@github.com` strings out of any logged
+  push error.
+
 ## [0.2.2] — 2026-06-08
 
 ### Fixed

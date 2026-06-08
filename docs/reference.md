@@ -12,6 +12,7 @@ skills. For the narrative, see [architecture.md](architecture.md) and
 | `CLAUDE_JOURNAL_PATH` | `~/claude-journal` | hooks, `paths.py`, bootstrap, init | local path of the data-repo clone |
 | `CLAUDE_JOURNAL_BUFFER` | `~/.claude/journal-buffer.jsonl` | `push.py` | offline breadcrumb backlog file |
 | `GIT_CRYPT_KEY_B64` | *(set on the routine)* | consolidator | base64 of the git-crypt key, to unlock in the cloud |
+| `GH_TOKEN` | *(set on the routine)* | consolidator | fine-grained GitHub PAT (Contents R/W) the cloud routine uses to clone + push the private repo |
 | `CLAUDE_PLUGIN_ROOT` | *(set by Claude Code)* | `hooks.json` | plugin install root used to locate hook scripts |
 
 ## Fixed local paths (not configurable)
@@ -19,7 +20,8 @@ skills. For the narrative, see [architecture.md](architecture.md) and
 | Path | Mode | What it is |
 | --- | --- | --- |
 | `~/.claude/journal/git-crypt.key` | `0600` | the git-crypt symmetric key (never committed) |
-| `~/.claude/journal/` | `0700` | dir holding the key + device name |
+| `~/.claude/journal/gh-token` | `0600` | fine-grained GitHub PAT for the cloud routine's clone + push (never committed) |
+| `~/.claude/journal/` | `0700` | dir holding the key + token + device name |
 | `~/.claude/journal/device-name` | — | this device's stable name |
 | `~/.claude/journal-buffer.jsonl` | — | offline breadcrumb backlog (overridable via env) |
 | `~/.claude/journal-buffer.log` | — | hook error log (pull/push/extract failures) |

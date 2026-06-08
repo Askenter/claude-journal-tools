@@ -25,6 +25,22 @@ Verify, and stop with a specific message if any fails:
 2. `~/.claude/journal/git-crypt.key` exists (the key the routine needs).
 3. `CLAUDE_JOURNAL_REPO_URL` is set (or discoverable via
    `git -C ~/claude-journal remote get-url origin`) — the routine clones it.
+4. `~/.claude/journal/gh-token` exists — the GitHub token the cloud routine
+   uses to clone **and push** the private repo (created by `/journal-setup`
+   Step 4b). The cloud has no SSH key, no `gh`, and no token of its own, so
+   without this the routine fails at clone with `could not read Username for
+   github.com`. The repo exists by now, so verify the token actually has
+   **write** access (derive `<owner>/<repo>` from the repo URL):
+
+   ```bash
+   test -f ~/.claude/journal/gh-token && \
+   GH_TOKEN="$(cat ~/.claude/journal/gh-token)" \
+     gh api repos/<owner>/<repo> --jq '.permissions.push'
+   ```
+
+   Stop if the file is missing (send them back to `/journal-setup` Step 4b) or
+   if push is not `true` (the token lacks **Contents: Read and write** on the
+   repo, or names the wrong repo). Never echo the token.
 
 ## Step 1 — Idempotency check (once per account, not per device)
 
@@ -142,6 +158,8 @@ night. Show the user, in one block, exactly what you're about to do:
 - chosen local run time(s) + their UTC equivalent (winter and summer)
 - data repo URL it will clone
 - that it needs the git-crypt key in `GIT_CRYPT_KEY_B64`
+- that it clones and pushes over HTTPS using the scoped GitHub token in
+  `~/.claude/journal/gh-token`, injected as `GH_TOKEN` (never shown)
 
 Ask them to confirm (or adjust the cadence/time). **Do not proceed without a
 yes.**
@@ -158,19 +176,30 @@ claude -p --bare \
   --allowedTools "Bash,Read" \
   "/schedule create a routine named 'journal-consolidator' that runs \
 <SCHEDULE>. The routine prompt is the contents of \
-~/claude-journal/consolidator/ROUTINE.md. It needs the environment variable \
-GIT_CRYPT_KEY_B64 set to $(base64 -w0 ~/.claude/journal/git-crypt.key) and \
-should clone <REPO_URL> before running."
+~/claude-journal/consolidator/ROUTINE.md. It needs two environment variables: \
+GIT_CRYPT_KEY_B64 set to $(base64 -w0 ~/.claude/journal/git-crypt.key), and \
+GH_TOKEN set to $(cat ~/.claude/journal/gh-token). Before running it should \
+clone the private data repo over HTTPS using that token: \
+git clone https://x-access-token:\$GH_TOKEN@github.com/<OWNER>/<REPO>.git \
+— the same token then authenticates the routine's git push."
 ```
 
-- Substitute `<SCHEDULE>` and `<REPO_URL>` yourself; leave the
-  `$(base64 …)` literal so the shell expands it. For the once-a-day default,
-  `<SCHEDULE>` is `at <LOCAL_TIME> in my local timezone`; for a multi-run
-  cadence, `<SCHEDULE>` is `on the cron schedule '<CRON>'` (e.g.
-  `'30 */6 * * *'` for 4×/day).
+- Substitute `<SCHEDULE>` and `<OWNER>/<REPO>` yourself. For the once-a-day
+  default, `<SCHEDULE>` is `at <LOCAL_TIME> in my local timezone`; for a
+  multi-run cadence, `<SCHEDULE>` is `on the cron schedule '<CRON>'` (e.g.
+  `'30 */6 * * *'` for 4×/day). Derive `<OWNER>/<REPO>` from `CLAUDE_JOURNAL_REPO_URL`
+  (the HTTPS clone URL is always `https://github.com/<owner>/<repo>.git`, even
+  if the configured URL is SSH).
+- **Two different expansions, deliberately.** Leave `$(base64 …)` and
+  `$(cat …)` literal so *your local shell* expands them at runtime (the secret
+  values are substituted into the live process, not typed into the transcript).
+  But escape `\$GH_TOKEN` in the clone URL so it passes through literally and is
+  expanded by the *cloud routine* at clone time — if you drop the backslash your
+  local shell expands it (to empty) and the cloud gets no token.
 - On macOS, `base64` has no `-w0` flag — drop it (`$(base64 ~/.claude/...)`).
-- **Never** run a command that prints the key (no bare `base64 …`, no `echo`
-  of `GIT_CRYPT_KEY_B64`). If a step would surface the raw key, redact it.
+- **Never** run a command that prints either secret (no bare `base64 …` / `cat
+  ~/.claude/journal/gh-token`, no `echo` of `GIT_CRYPT_KEY_B64` or `GH_TOKEN`).
+  If a step would surface a raw secret, redact it.
 
 ## Step 5 — Verify and report
 
@@ -196,6 +225,9 @@ Run `claude -p --bare "/schedule list"` again and confirm
   a day.
 - Never let the raw git-crypt key (or its base64) appear in the transcript or
   any echoed command. Use command substitution; redact if anything leaks.
+- Same for the GitHub token: inject it via `$(cat ~/.claude/journal/gh-token)`
+  substitution, never type or `echo` its value or `GH_TOKEN`. The token grants
+  write access to the data repo — treat it exactly like the key.
 - This is a consequential, recurring, cloud-side action. The Step 3
   confirmation is mandatory — do not skip it even if the user seems eager.
 - You are not editing `ROUTINE.md` here. If the user wants to change what the

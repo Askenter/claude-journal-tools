@@ -463,11 +463,17 @@ date in the window:
 - Stay on the default branch (`main`)
 - `git push origin HEAD:main`
 
+> **Auth note.** This environment cloned the repo over HTTPS with a GitHub
+> token embedded in the `origin` URL, so `git push` authenticates automatically
+> — you configure nothing. That URL is a **credential**: never run `git remote
+> -v`, never echo `remote.origin.url`, and before logging any error strip every
+> `https://x-access-token:...@github.com` substring out of it.
+
 If push fails: `git pull --rebase` and retry up to 3 times with
 exponential backoff (1s, 4s, 16s). After the third failure, exit with
-the error in the routine log. Do **not** fall back to a `claude/*`
-feature branch — devices pull `main`, so anything outside `main` is
-invisible to them.
+the error in the routine log (URL-scrubbed, per the auth note above). Do
+**not** fall back to a `claude/*` feature branch — devices pull `main`, so
+anything outside `main` is invisible to them.
 
 ## Guardrails
 
@@ -480,6 +486,11 @@ invisible to them.
   `AEdJVENSWVBU` prefix. The key is for unlock only — it must not
   appear in any commit, log, output, or response. See §0 "Key-handling
   rules" for the full list.
+- **Never expose the GitHub token.** The `GH_TOKEN` env var and the token
+  embedded in `origin`'s URL are write-once credentials, same as the git-crypt
+  key: never echo `GH_TOKEN`, never print `remote.origin.url` (it contains the
+  token), and strip any `https://x-access-token:...@github.com` string out of
+  logged errors. See the §7 "Auth note".
 - If a breadcrumb or transcript is malformed (missing required fields,
   invalid JSON, unreadable), skip it and note the skip in the routine
   log. Do not fail the whole run.

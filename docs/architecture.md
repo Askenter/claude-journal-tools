@@ -100,7 +100,8 @@ nightly by default — and may be scheduled several times a day, since every
 output is an idempotent upsert (re-running a day refreshes, never duplicates).
 Each run:
 
-1. Clones the data repo and unlocks it with the git-crypt key from
+1. Clones the private data repo over HTTPS with a fine-grained GitHub token
+   from `GH_TOKEN`, then unlocks it with the git-crypt key from
    `GIT_CRYPT_KEY_B64`.
 2. Targets a **yesterday + today UTC** window (or a single `force-date`) and
    gathers `raw/*/<date>/*.json` from every device.

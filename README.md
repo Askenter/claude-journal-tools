@@ -181,9 +181,11 @@ The consolidator is a Claude Code routine created with the built-in
 `/schedule` slash command, run **at least nightly** (you can schedule it
 several times a day — see cadence below). Its prompt lives at
 `~/claude-journal/consolidator/ROUTINE.md` and it expects a base64-encoded
-git-crypt key in the environment variable `GIT_CRYPT_KEY_B64`. It only needs
-to be scheduled **once per account** (it runs in Anthropic's cloud, not on a
-device).
+git-crypt key in the environment variable `GIT_CRYPT_KEY_B64`. Because it
+clones and pushes your **private** data repo from Anthropic's cloud — where no
+SSH key or `gh` exists — it also needs a fine-grained GitHub token (Contents:
+Read and write on that repo) in `GH_TOKEN`. It only needs to be scheduled
+**once per account** (it runs in Anthropic's cloud, not on a device).
 
 **Recommended — let Claude create it** (idempotent, UTC-safe, confirms first):
 
@@ -194,8 +196,9 @@ device).
 The skill checks whether a `journal-consolidator` routine already exists,
 asks how many times a day to run, picks a DST-safe run time, shows you
 exactly what it'll create, and only fires after you confirm. It passes the
-key via a shell `$(base64 …)` substitution so the secret never lands in the
-transcript.
+key and the GitHub token via shell `$(…)` substitutions so neither secret ever
+lands in the transcript. (`/journal-setup` Step 4b mints and stores that token
+at `~/.claude/journal/gh-token`.)
 
 <details><summary>Manual equivalent (what the skill runs under the hood)</summary>
 
@@ -205,13 +208,20 @@ claude -p --bare \
   "/schedule create a nightly routine named 'journal-consolidator' \
 that runs at 03:30 in my local timezone. The routine prompt is the \
 contents of ~/claude-journal/consolidator/ROUTINE.md. It needs the \
-environment variable GIT_CRYPT_KEY_B64 set to <BASE64_KEY> and should \
-clone <your data-repo URL> before running."
+environment variables GIT_CRYPT_KEY_B64 set to <BASE64_KEY> and GH_TOKEN \
+set to <GITHUB_TOKEN>, and before running should clone the private repo \
+over HTTPS with the token: \
+git clone https://x-access-token:\$GH_TOKEN@github.com/<owner>/<repo>.git \
+(the same token then authenticates its push)."
 ```
 
 Replace `<BASE64_KEY>` with `base64 -w0 ~/.claude/journal/git-crypt.key`
-output (treat it as secret — never echo it to shared logs; drop `-w0` on
-macOS).
+output (drop `-w0` on macOS) and `<GITHUB_TOKEN>` with
+`cat ~/.claude/journal/gh-token`. Both are secrets — never echo them to shared
+logs. Keep the `\$GH_TOKEN` in the clone URL backslash-escaped so the **cloud**
+routine expands it, not your local shell. The token is a fine-grained PAT
+scoped to the data repo with Contents: Read and write; the cloud has no other
+GitHub auth, so without it the clone fails.
 
 </details>
 
