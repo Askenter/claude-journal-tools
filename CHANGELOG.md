@@ -30,6 +30,8 @@ Turnkey setup, skills-as-proposals, and full documentation.
 - **Documentation set under `docs/`** — `index`, `architecture`, `data-flow`,
   `setup`, `reference`, `agents` — built for humans and agents, with ASCII
   diagrams.
+- `/journal-setup` now offers to enable plugin **auto-update** during setup, so
+  future releases reach the device hands-off.
 
 ### Fixed
 - Bootstrap validates every precondition (pre-existing key, git identity, `gh`
@@ -37,6 +39,9 @@ Turnkey setup, skills-as-proposals, and full documentation.
   with a half-initialized repo and an orphaned git-crypt key.
 - DST-safe schedule-time computation now resolves the IANA timezone on
   macOS/RHEL instead of silently collapsing to a fixed offset.
+- Corrected the README update instructions: upgrading the plugin needs both
+  `/plugin marketplace update` **and** `/plugin update` (the first alone only
+  refreshes the marketplace, it does not install the new version).
 
 ### Changed
 - Skills are referenced by their bare names (`/journal`, `/journal-setup`,

@@ -133,7 +133,45 @@ If the verification fails, the bootstrap was strict-aborted by a precondition
 — read the error the user saw, fix the precondition (Steps 1–4), and have them
 re-run.
 
-## Step 7 — Point at next steps
+## Step 7 — Offer hands-off updates (auto-update)
+
+This applies to the **plugin** install — how the user got this skill. (If the
+journal tooling is instead a manual symlink install — no entry whose
+`source.repo` ends in `/claude-journal-tools` in
+`~/.claude/plugins/known_marketplaces.json` — skip this and tell them updates
+come from a `git pull` of their checkout, not plugin auto-update.)
+
+Third-party marketplaces have auto-update **off by default**, so new releases
+won't reach the user unless they update by hand. Offer to fix that:
+
+1. Find the journal marketplace's registered name — the key in
+   `~/.claude/plugins/known_marketplaces.json` whose `source.repo` ends in
+   `/claude-journal-tools` (fall back to `claude-journal-tools`).
+2. Check `~/.claude/settings.json` for
+   `extraKnownMarketplaces.<name>.autoUpdate`. If it is already `true`, tell the
+   user auto-update is on and move on.
+3. Otherwise ask whether they want hands-off auto-updates. If yes, **merge**
+   this into `~/.claude/settings.json` — preserve every existing key; only add
+   or extend `extraKnownMarketplaces`:
+
+   ```json
+   "extraKnownMarketplaces": {
+     "<name>": {
+       "source": { "source": "github", "repo": "<owner>/claude-journal-tools" },
+       "autoUpdate": true
+     }
+   }
+   ```
+
+   Use the exact registered `<name>` from step 1 so it merges with the existing
+   registration instead of creating a duplicate; substitute the real `<owner>`.
+4. If they decline the settings edit, give them the manual alternative: `/plugin`
+   → **Marketplaces** → `<name>` → **Enable auto-update**.
+
+Either way, remind them updates only arrive when a new **version** is published
+(the maintainer bumps `version` in the plugin manifest per release).
+
+## Step 8 — Point at next steps
 
 Once verified, tell the user the two remaining steps (do not run them here):
 
