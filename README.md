@@ -234,11 +234,26 @@ After a successful run the data repo gains:
 
 ## Updating
 
-```bash
-# Plugin install: update via the marketplace
-/plugin marketplace update claude-journal-tools
+**The plugin.** Two steps — refreshing the marketplace alone does *not* upgrade
+the installed plugin:
 
-# Data repo:
+```text
+/plugin marketplace update claude-journal-tools
+/plugin update claude-journal@claude-journal-tools
+```
+
+Prefer hands-off? Enable auto-update once — `/plugin` → **Marketplaces** →
+`claude-journal-tools` → **Enable auto-update** (third-party marketplaces have it
+**off by default**). `/journal-setup` also offers to turn this on during setup.
+
+> New releases only appear when the **version** is bumped in
+> `.claude-plugin/plugin.json` — pushing commits without a version bump is not
+> seen as an update.
+
+**The data repo.** Your distilled memories/skills/proposals sync automatically
+at each SessionStart; to pull manually:
+
+```bash
 git -C ~/claude-journal pull
 ```
 
