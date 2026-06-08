@@ -63,3 +63,33 @@ def test_advertises_journal_slash_command(tmp_path: Path):
     assert "/journal accept" in out
     assert "/journal skip" in out
     assert "/journal edit" in out
+
+
+def test_labels_new_skill_proposal(tmp_path: Path):
+    journal = tmp_path / "journal"
+    proposals = journal / "proposals"
+    proposals.mkdir(parents=True)
+    (proposals / "2026-06-08--home-opc-ASEP.md").write_text(
+        "## New skill: condition-based-waiting\n\n"
+        "- **kind:** new-skill\n"
+        "- **scope:** global\n"
+    )
+    out = build_proposal_context(journal_repo=journal, cwd="/home/opc/ASEP")
+    assert out is not None
+    assert "[new skill]" in out
+    assert "New skill: condition-based-waiting" in out
+
+
+def test_labels_each_entry_in_mixed_file(tmp_path: Path):
+    journal = tmp_path / "journal"
+    proposals = journal / "proposals"
+    proposals.mkdir(parents=True)
+    (proposals / "2026-06-08--home-opc-ASEP.md").write_text(
+        "## New skill: foo\n\n- **kind:** new-skill\n- **scope:** global\n\n"
+        "## feedback proposal — be terse\n\n```\ntype: feedback\n```\n\n"
+        "## CLAUDE.md edit — update deploy\n\n- **target:** ASEP/CLAUDE.md\n"
+    )
+    out = build_proposal_context(journal_repo=journal, cwd="/home/opc/ASEP")
+    assert "[new skill]" in out
+    assert "[feedback rule]" in out
+    assert "[CLAUDE.md edit]" in out
