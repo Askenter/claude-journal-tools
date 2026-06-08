@@ -79,6 +79,61 @@ def _require_tools(need_gh: bool) -> None:
         )
 
 
+def _git_identity_configured() -> bool:
+    """True iff git resolves both user.name and user.email to non-empty values.
+
+    Probed from a throwaway non-repo directory so we see exactly the global +
+    system (+ env) identity a freshly-created repo's first commit will inherit —
+    never some unrelated repo's local config that happens to be the cwd."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as scratch:
+        for key in ("user.name", "user.email"):
+            r = subprocess.run(
+                ["git", "config", "--get", key],
+                cwd=scratch,
+                capture_output=True,
+                text=True,
+            )
+            if r.returncode != 0 or not r.stdout.strip():
+                return False
+    return True
+
+
+def _require_git_identity() -> None:
+    """Fail fast (before any mutation) if git has no commit identity.
+
+    Otherwise the init commit aborts with 'empty ident name' on fresh
+    machines/VMs/containers — *after* the repo, skeleton, git-crypt state and
+    the exported key already exist — leaving the user wedged. The journal-setup
+    skill sets this interactively; here we only validate."""
+    if not _git_identity_configured():
+        raise SystemExit(
+            "git has no commit identity configured — the init commit would "
+            "fail and leave a half-initialized repo behind. Set it first:\n"
+            '  git config --global user.name "Your Name"\n'
+            '  git config --global user.email "you@example.com"\n'
+            "(or run /claude-journal:journal-setup, which does this for you)."
+        )
+
+
+def _require_gh_auth() -> None:
+    """Fail fast if `gh` is installed but not logged in, so remote creation
+    doesn't blow up deep inside `gh repo create` after the local repo and key
+    already exist."""
+    r = subprocess.run(
+        ["gh", "auth", "status"],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        raise SystemExit(
+            "gh is installed but not authenticated — `gh repo create` would "
+            "fail. Run `gh auth login` first (or run "
+            "/claude-journal:journal-setup, which prompts you to sign in)."
+        )
+
+
 def _write_skeleton(repo: Path) -> None:
     (repo / ".gitattributes").write_text(gitattributes_content())
     for d in SKELETON_DIRS:
@@ -166,13 +221,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.repo and args.no_remote:
         parser.error("--repo and --no-remote are mutually exclusive.")
 
+    # Validate every precondition BEFORE touching the filesystem, so a missing
+    # tool / identity / login or a pre-existing key can never leave a
+    # half-initialized repo and an orphaned git-crypt key behind.
     if is_git_repo(repo):
         raise SystemExit(
             f"{repo} is already a git repo — refusing to re-bootstrap. Delete "
             f"it or pick another --journal-path if you really want a fresh one."
         )
-
+    if KEYFILE.exists():
+        raise SystemExit(
+            f"{KEYFILE} already exists — refusing to overwrite an existing "
+            f"key. Move it aside if this is genuinely a new repo."
+        )
     _require_tools(need_gh=need_remote)
+    _require_git_identity()
+    if need_remote:
+        _require_gh_auth()
 
     repo.mkdir(parents=True, exist_ok=True)
     _run(["git", "init", "-b", "main"], cwd=repo)
@@ -181,11 +246,6 @@ def main(argv: list[str] | None = None) -> int:
 
     KEYFILE.parent.mkdir(parents=True, exist_ok=True)
     os.chmod(KEYFILE.parent, 0o700)
-    if KEYFILE.exists():
-        raise SystemExit(
-            f"{KEYFILE} already exists — refusing to overwrite an existing "
-            f"key. Move it aside if this is genuinely a new repo."
-        )
     _run(["git-crypt", "export-key", str(KEYFILE)], cwd=repo)
     os.chmod(KEYFILE, 0o600)
 

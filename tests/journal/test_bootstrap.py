@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -69,3 +70,64 @@ def test_main_rejects_repo_with_no_remote(tmp_path):
     target = tmp_path / "j"
     with pytest.raises(SystemExit):
         bootstrap.main(["--journal-path", str(target), "--repo", "x/y", "--no-remote"])
+
+
+def test_main_refuses_before_mutation_when_keyfile_exists(tmp_path, monkeypatch):
+    # bug_002: the pre-existing-key guard must fire BEFORE git init / git-crypt
+    # init pollute a fresh repo, so we never strand an unexported key.
+    key = tmp_path / "key"
+    key.write_text("pre-existing")
+    monkeypatch.setattr(bootstrap, "KEYFILE", key)
+    target = tmp_path / "j"
+    with pytest.raises(SystemExit):
+        bootstrap.main(["--journal-path", str(target), "--no-remote"])
+    assert not (target / ".git").exists()  # bailed before touching the fs
+
+
+def test_main_refuses_before_mutation_without_identity(tmp_path, monkeypatch):
+    # bug_014: no git identity must bail up front, not mid-init after the repo,
+    # git-crypt state and exported key already exist.
+    monkeypatch.setattr(bootstrap, "KEYFILE", tmp_path / "absent-key")
+    monkeypatch.setattr(bootstrap, "_require_tools", lambda need_gh: None)
+    monkeypatch.setattr(bootstrap, "_git_identity_configured", lambda: False)
+    target = tmp_path / "j"
+    with pytest.raises(SystemExit):
+        bootstrap.main(["--journal-path", str(target), "--no-remote"])
+    assert not (target / ".git").exists()
+
+
+def test_git_identity_configured_false_when_a_field_missing(monkeypatch):
+    def fake_run(cmd, *a, **k):
+        out = "Anthony\n" if cmd[-1] == "user.name" else ""  # email unset
+        return subprocess.CompletedProcess(cmd, 0 if out else 1, stdout=out, stderr="")
+
+    monkeypatch.setattr(bootstrap.subprocess, "run", fake_run)
+    assert bootstrap._git_identity_configured() is False
+
+
+def test_git_identity_configured_true_when_both_set(monkeypatch):
+    monkeypatch.setattr(
+        bootstrap.subprocess,
+        "run",
+        lambda cmd, *a, **k: subprocess.CompletedProcess(cmd, 0, stdout="x\n", stderr=""),
+    )
+    assert bootstrap._git_identity_configured() is True
+
+
+def test_require_gh_auth_raises_when_unauthenticated(monkeypatch):
+    monkeypatch.setattr(
+        bootstrap.subprocess,
+        "run",
+        lambda cmd, *a, **k: subprocess.CompletedProcess(cmd, 1, stdout="", stderr="not logged in"),
+    )
+    with pytest.raises(SystemExit):
+        bootstrap._require_gh_auth()
+
+
+def test_require_gh_auth_ok_when_authenticated(monkeypatch):
+    monkeypatch.setattr(
+        bootstrap.subprocess,
+        "run",
+        lambda cmd, *a, **k: subprocess.CompletedProcess(cmd, 0, stdout="Logged in", stderr=""),
+    )
+    bootstrap._require_gh_auth()  # must not raise
