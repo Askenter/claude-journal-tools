@@ -30,7 +30,7 @@ Before anything, look for an existing setup and stop if found:
    repo is already bootstrapped. Tell the user, show its remote
    (`git -C <path> remote -v`), and stop — point them at
    `tools/journal/init_device.py` (to add *this* device) or
-   `/journal-schedule` (to create the nightly routine) instead.
+   `/journal-schedule` (to create the consolidator routine) instead.
 2. If `~/.claude/journal/git-crypt.key` already exists but the data repo does
    not, this is probably an *additional* device, not a first bootstrap — the
    key was placed out-of-band. Do **not** run bootstrap (it would refuse
@@ -179,13 +179,16 @@ Once verified, tell the user the two remaining steps (do not run them here):
    `CLAUDE_JOURNAL_REPO_URL` and run
    `tools/journal/init_device.py <device-name>`. Additional devices need the
    git-crypt key placed first, out-of-band (see README).
-2. **Create the nightly routine, once per account**, with
-   `/journal-schedule`.
+2. **Create the consolidator routine, once per account**, with
+   `/journal-schedule`. It asks **how many times a day** to run — default is
+   once (nightly); pick more only if you want distilled output to reach your
+   other devices faster during the day (runs must be ≥1h apart and stay under
+   your per-account daily run cap of ≈15) — then it picks a DST-safe time.
 
 Also point out the **consolidator prompt**: bootstrap seeded
 `consolidator/ROUTINE.md` into the new data repo from this tools repo's
 bundled template (`$TOOLS/tools/journal/templates/ROUTINE.md`). That data-repo
-copy is the **source of truth** for what the nightly routine does — distilling
+copy is the **source of truth** for what the routine does — distilling
 digests, memories, skill proposals, and CLAUDE.md-edit proposals. Tell the
 user they can **edit it** to tune the distillation rules (or swap in their own
 prompt entirely); after any edit they re-paste the body into the cloud routine

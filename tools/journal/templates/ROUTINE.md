@@ -1,11 +1,17 @@
-# Cognitive Consolidation Routine — v5 (digests + memories + skill proposals + CLAUDE.md edits)
+# Cognitive Consolidation Routine — v6 (digests + memories + skill proposals + CLAUDE.md edits)
 
-You are the nightly consolidator for a personal cognitive-consolidation
-journal. The repository you start in is `claude-journal` — a private
-repo that holds raw session breadcrumbs from one or more developer
-devices, plus the digests/memories/skills/proposals you produce.
+You are the consolidator for a personal cognitive-consolidation journal.
+The repository you start in is `claude-journal` — a private repo that
+holds raw session breadcrumbs from one or more developer devices, plus the
+digests/memories/skills/proposals you produce.
 
-This v5 version writes:
+This routine is **safe to run more than once per day** (the user can
+schedule it several times daily so distilled output propagates to other
+devices faster). Every output is an idempotent **upsert**, so re-running
+within the same day refreshes prior output instead of duplicating it — see
+§1 for the date window and the per-track idempotency keys called out below.
+
+This v6 version writes:
 - per-device daily digests (Track 0)
 - distilled memories per project (Track 1: 1a auto-applied, 1b proposed)
 - new-skill proposals (Track 2: proposed, with CHANGELOG + INDEX records)
@@ -81,16 +87,37 @@ the key value again**. Specifically:
   any output. Treat it as a credential and skip past it.
 - Never commit `/tmp/journal-key/` or anything under `/tmp/`.
 
-### 1. Determine the target date
+### 1. Determine the target date(s)
+
+This routine is **safe to run more than once per day**. Pick the dates to
+process as follows:
 
 - If the API trigger payload's `text` field contains
-  `force-date=YYYY-MM-DD`, use that.
-- Otherwise use **yesterday** in UTC.
+  `force-date=YYYY-MM-DD`, process **only that date** — the explicit
+  escape hatch: a single date, no window.
+- Otherwise, process a rolling **two-day UTC window: yesterday and today**.
+  - A run after UTC midnight still fully consolidates *yesterday*; intraday
+    runs refresh *today* as breadcrumbs accumulate, so other devices see
+    digests/memories/proposals sooner — and any run that fires after UTC
+    midnight still catches the previous day's late tail.
+  - **You may skip a date you've already fully consolidated:** if
+    `digests/<date>/` already covers every device that has a
+    `raw/<device>/<date>/` directory and no new session files have appeared
+    for that date since, skip re-distilling it. When in doubt, re-process —
+    every write below is idempotent, so re-processing only refreshes; it
+    never duplicates.
 
-### 2. List devices and sessions for the date
+Everywhere below, "the target date" / "`<target-date>`" means *each* date in
+the window you're processing: run Tracks 0–3 once per date, writing that
+date's files. Treat all writes as **upserts**, not appends, so a second run
+on the same day refreshes prior output instead of duplicating it (the
+per-track idempotency keys are spelled out in each section).
 
-`ls raw/*/<target-date>/` (skip devices with no directory). If no device
-has breadcrumbs for the date, write nothing, commit nothing, exit.
+### 2. List devices and sessions for each date
+
+For each date in the window, `ls raw/*/<date>/` (skip devices with no
+directory). If **no** date in the window has any device breadcrumbs, write
+nothing, commit nothing, exit. Otherwise process every date that does.
 
 ### 3. Track 0 — per-device daily digests
 
@@ -124,6 +151,10 @@ For each device on that date, produce `digests/<target-date>/<device>.md`:
   Synthesize, don't list every breadcrumb.
 - **No fabrication:** breadcrumbs and transcripts are your only sources.
   Don't invent file contents you didn't see.
+- **Idempotent:** `digests/<target-date>/<device>.md` is keyed by date +
+  device — regenerate (overwrite) it each run. A re-run on the same day
+  just refreshes the digest with any new sessions; it never creates a
+  second file.
 
 ### 4. Track 1 — memory distillation
 
@@ -210,11 +241,17 @@ merge them into one entry. For genuine contradictions, keep both with a
 
 #### How to write Track 1b (`feedback`)
 
-`feedback` memories never auto-apply in v2. Write them as proposals at:
+`feedback` memories never auto-apply. Write them as proposals at:
 
 `proposals/<target-date>-<project>.md`
 
-If the file already exists, append (don't overwrite). Format each entry:
+**Upsert, don't blind-append.** This file may already exist from an earlier
+run today (or from another device). Before writing, read it and key each
+entry by its **source `session_id` + kind** (`feedback`): if an entry for
+the same session already exists, update it in place; only append when the
+source session is new. The `<YYYY-MM-DDTHH:MM:SSZ>` in the heading is
+informational provenance, **not** part of the identity key — never let a
+fresh timestamp turn a re-run into a duplicate entry. Format each entry:
 
 ```markdown
 ## feedback proposal — <YYYY-MM-DDTHH:MM:SSZ>
@@ -262,8 +299,11 @@ write zero skill proposals today. That's a normal outcome.
 
 #### Output — a proposal entry
 
-Append (don't overwrite) to `proposals/<target-date>-<project>.md` — the
-same file Track 1b/Track 3 use. Decide the skill's scope:
+Upsert into `proposals/<target-date>-<project>.md` — the same file Track
+1b/Track 3 use. Key each skill entry by its **`<short-snake-name>`**: if a
+`## New skill: <name>` entry already exists in the file, refresh it in place
+rather than adding a second one (a re-run must not duplicate it). Decide the
+skill's scope:
 
 - **Cross-project** technique → `scope: global`,
   `target: skills/global/<short-snake-name>/SKILL.md`
@@ -301,7 +341,9 @@ code blocks round-trips intact):
 Make the proposed skill plainly visible in two data-repo files:
 
 - Append one line to `CHANGELOG.md` (create with a `# Changelog` heading
-  if missing):
+  if missing) — but **only if no `~skill proposed <scope>/<name>` line for
+  this skill already exists for `<target-date>`**, so a re-run never adds a
+  duplicate ledger line:
 
   ```
   <target-date> ~skill proposed <scope>/<name> — distilled from <N> sessions on <date-1>, <date-2>, …
@@ -365,8 +407,10 @@ preferences, or any change that doesn't materially affect behavior.
 
 #### Output format
 
-Append (don't overwrite) entries to `proposals/<target-date>-<project>.md`,
-the same file Track 1b uses. Each Track 3 entry:
+Upsert entries into `proposals/<target-date>-<project>.md`, the same file
+Track 1b uses. Key each entry by its **source `session_id` + target file**
+(`<project>/CLAUDE.md`): refresh a matching entry in place on a re-run
+instead of appending a duplicate. Each Track 3 entry:
 
 ```markdown
 ## CLAUDE.md edit — <one-line summary> — <YYYY-MM-DDTHH:MM:SSZ>
@@ -400,16 +444,22 @@ Aim for at most 1–2 Track 3 proposals per project per day.
 
 ### 7. Commit and push
 
-After all digests + memories + proposals + skills are written:
+After all digests + memories + proposals + skills are written for every
+date in the window:
 
+- **Skip the commit if nothing changed.** Run `git status --porcelain`
+  after writing; if it's empty, this run was a no-op (a redundant intraday
+  re-run that refreshed nothing) — **commit nothing, push nothing, exit 0.**
+  This keeps frequent runs from spamming `main` with empty commits.
 - `git add digests/ memories/ proposals/ skills/ CHANGELOG.md`
   (state/ is read-only for this routine — the devices write it)
-- Commit message: `consolidate: <target-date> (<digest-count> digests,
-  <memory-count> memories, <proposal-count> proposals)`
-  — any count can be zero. Track 1b feedback, Track 2 new-skill, and
-  Track 3 CLAUDE.md proposals are all counted under `proposals` since they
-  share the proposals/ directory. (`skills/` is still staged so the
-  `skills/INDEX.md` manifest goes up with them.)
+- Commit message: `consolidate: <window> (<digest-count> digests,
+  <memory-count> memories, <proposal-count> proposals)`, where `<window>`
+  is the single date (`force-date` mode) or `<earliest>..<latest>` of the
+  dates you actually processed. Any count can be zero. Track 1b feedback,
+  Track 2 new-skill, and Track 3 CLAUDE.md proposals are all counted under
+  `proposals` since they share the proposals/ directory. (`skills/` is
+  still staged so the `skills/INDEX.md` manifest goes up with them.)
 - Stay on the default branch (`main`)
 - `git push origin HEAD:main`
 
@@ -441,5 +491,12 @@ invisible to them.
   it that way" is not. When in doubt, skip.
 - Memory files are markdown; preserve any existing user-written content
   if you have to update an existing file.
-- Commit messages and proposal filenames must use the target date, not
-  today's date.
+- **Idempotent by construction.** This routine may run several times a day.
+  Every output is an upsert keyed as described per track — digests by
+  date + device, feedback/CLAUDE.md proposals by source `session_id`,
+  skill proposals + CHANGELOG + INDEX by skill name (and date) — never a
+  blind append. A run that changes nothing must not commit (see §7).
+- Proposal filenames and per-date digest paths must use the date being
+  processed, not the wall-clock "today". The commit message uses the
+  window (see §7). With `force-date`, all of these collapse to that one
+  date.

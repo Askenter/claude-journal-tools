@@ -91,17 +91,19 @@ Triggered by Claude Code's **`Stop`** event at session end. The
 
 This phase runs **no LLM** — it is pure data collection, fast and offline-safe.
 
-### Phase 2 — Consolidate (in the cloud, once per account, nightly)
+### Phase 2 — Consolidate (in the cloud, once per account, at least nightly)
 
 A single Claude Code **routine** created with `/schedule` (see the
 `/journal-schedule` skill). Its prompt is `consolidator/ROUTINE.md` in the data
-repo (kept plaintext so the routine can read it from a fresh checkout). Nightly
-it:
+repo (kept plaintext so the routine can read it from a fresh checkout). It runs
+nightly by default — and may be scheduled several times a day, since every
+output is an idempotent upsert (re-running a day refreshes, never duplicates).
+Each run:
 
 1. Clones the data repo and unlocks it with the git-crypt key from
    `GIT_CRYPT_KEY_B64`.
-2. Targets **yesterday in UTC** and gathers `raw/*/<date>/*.json` from every
-   device.
+2. Targets a **yesterday + today UTC** window (or a single `force-date`) and
+   gathers `raw/*/<date>/*.json` from every device.
 3. Writes per-device **digests**, then runs **three-track distillation**:
    - **Track 1a — facts** → `memories/<project>/*.md` (auto-applied).
    - **Track 1b — feedback rules** → `proposals/…` (needs your approval).

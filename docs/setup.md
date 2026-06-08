@@ -110,26 +110,34 @@ python3 ~/claude-journal-tools/tools/journal/init_device.py "$(hostname -s)"
 > not** combine `--register-hooks` with the plugin install, or every session
 > pushes its breadcrumb twice.
 
-## Step 4 — Schedule the nightly consolidator (once per account)
+## Step 4 — Schedule the consolidator (once per account)
 
 The consolidator is a Claude Code routine created with `/schedule`. It runs in
 Anthropic's cloud, **once for your whole account** (not per device).
 
-**Recommended — run the skill** (idempotent, picks a DST-safe time, confirms
-first, keeps the key out of the transcript):
+**Recommended — run the skill** (idempotent, asks cadence, picks a DST-safe
+time, confirms first, keeps the key out of the transcript):
 
 ```text
 /journal-schedule
 ```
 
-It checks whether a `journal-consolidator` routine already exists, computes a
-UTC-safe run time, shows you exactly what it will create, and only fires after
-you confirm.
+It checks whether a `journal-consolidator` routine already exists, asks **how
+many times a day** to run, computes a UTC-safe run time, shows you exactly what
+it will create, and only fires after you confirm.
 
-> **Timing matters.** The routine treats the target date as *yesterday in UTC*,
-> so it must run comfortably after UTC midnight year-round (including DST) or you
-> get off-by-one digests. The skill validates against your timezone's maximum
-> (DST) offset; the default is `03:30` local.
+> **How often?** Once a day (nightly) is the default and right for most people.
+> Run it more frequently only if you want distilled output to reach your other
+> devices sooner during the day — runs must be **≥1h apart** (Anthropic's
+> minimum) and stay under your **per-account daily run cap** (≈15/day on the
+> standard tier; check yours at claude.ai/code/routines). Extra runs are safe:
+> every output is an idempotent upsert, so re-running a day refreshes rather
+> than duplicates.
+
+> **Timing matters.** The routine's default window is *yesterday + today in
+> UTC*, so the nightly run must fire comfortably after UTC midnight year-round
+> (including DST) or yesterday is never fully consolidated. The skill validates
+> against your timezone's maximum (DST) offset; the default is `03:30` local.
 
 Manage it later with:
 

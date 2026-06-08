@@ -127,7 +127,7 @@ cloud **once per account**. It is the only LLM step.
  ┌──────────────────────────────────────────────────────────────────┐
  │ 1. clone the data repo (fresh checkout)                           │
  │ 2. git-crypt unlock  (key from GIT_CRYPT_KEY_B64, never logged)   │
- │ 3. target date = yesterday in UTC                                 │
+ │ 3. dates = yesterday+today in UTC                                 │
  │ 4. gather raw/*/<target>/*.json  across ALL devices              │
  │       none? → commit nothing, exit clean                          │
  │ 5. per device → digests/<target>/<device>.md                      │

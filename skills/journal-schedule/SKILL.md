@@ -3,12 +3,15 @@ name: journal-schedule
 description: Use when the user runs `/journal-schedule` (or asks to "create/schedule the journal consolidator routine"). Creates the once-per-account nightly Phase 2 consolidator routine via Claude Code's `/schedule`, idempotently and with a confirmation gate. Run this once, after bootstrapping the data repo.
 ---
 
-You are setting up the **nightly consolidator routine** — the once-per-account
+You are setting up the **consolidator routine** — the once-per-account
 Phase 2 step that runs in Anthropic's cloud, distilling every device's
 breadcrumbs into digests/memories/skills/proposals. It is created with Claude
-Code's built-in `/schedule` command. Your job is to drive that creation
-safely: idempotent, UTC-safe, with the user's explicit go-ahead, and without
-ever leaking the git-crypt key into the transcript.
+Code's built-in `/schedule` command. It runs **at least nightly**, and the
+user may choose to run it **several times a day** so distilled output reaches
+their other devices sooner (the routine is idempotent — extra runs refresh
+rather than duplicate). Your job is to drive that creation safely: idempotent,
+UTC-safe, with the user's explicit go-ahead on both cadence and time, and
+without ever leaking the git-crypt key into the transcript.
 
 ## Preconditions (check first, bail clearly if unmet)
 
@@ -37,12 +40,49 @@ another**. Tell the user it's already scheduled, show its current time/cron,
 and offer to update it instead (`claude -p --bare "/schedule update
 journal-consolidator"`). Then stop.
 
-## Step 2 — Pick a UTC-safe schedule time
+## Step 2 — Pick cadence, then a UTC-safe time
 
-The routine treats "target date" as **yesterday in UTC**, so it must run
-*after* UTC midnight or you get off-by-one digests. `/schedule` takes a
-**local** time, and the local→UTC gap shifts by an hour across DST, so you
-must validate against the timezone's *maximum* offset (its DST offset).
+### 2a — How many runs per day? (ask the user)
+
+Default is **once a day (nightly)** — the simplest, lowest-usage choice and
+the right one for most people. Offer more frequent runs only if the user
+wants distilled output to reach their other devices faster during the day;
+the routine is idempotent, so extra runs refresh prior output instead of
+duplicating it.
+
+Two hard limits to honor when picking a cron expression:
+
+- **Minimum interval is 1 hour.** `/schedule` rejects anything more frequent
+  than hourly — never propose a sub-hourly cadence.
+- **Per-account daily cap.** Anthropic caps how many routine runs start per
+  account per day (currently **15 on the standard tier**; paid plans may
+  differ — the live number is at claude.ai/code/routines). Keep the chosen
+  cadence comfortably under the cap, and tell the user the figure so they can
+  confirm it fits their plan.
+
+Sensible presets to offer: **1/day (nightly, default)**, **2/day (~every
+12h)**, **4/day (every 6h)**, **8/day (every 3h)**.
+
+- **1/day** uses the local time you compute in 2b — `<mm> <hh> * * *`. Do
+  *not* feed it through the step formula below.
+- **2+/day** uses a cron hour-step: `<mm> */k * * *`, where `k = floor(24 /
+  runs)` (so 2→12, 4→6, 8→3; `k` must be ≥ 1, i.e. ≤ 24 runs, but the daily
+  cap binds first). The hours fire at multiples of `k` from `00` (e.g.
+  `*/6` → 00,06,12,18); only the **minute** `<mm>` carries over from 2b's
+  base time — the base *hour* doesn't appear in a stepped expression.
+
+At least one run must land **after UTC midnight** so the previous day is fully
+consolidated. Any `*/k` hour step guarantees this (consecutive runs are ≤ `k` ≤
+12h apart, so one always falls within 12h after UTC midnight); for the
+once-a-day case, the post-midnight time you compute in 2b guarantees it.
+
+### 2b — UTC-safe base time
+
+The routine's default window is **yesterday + today in UTC**, so the
+once-a-day run must fire *after* UTC midnight or yesterday is never fully
+consolidated. `/schedule` takes a **local** time, and the local→UTC gap
+shifts by an hour across DST, so you must validate against the timezone's
+*maximum* offset (its DST offset).
 
 Compute, don't guess. Use Python:
 
@@ -84,9 +124,12 @@ print(f"timezone={tz} max_utc_offset=+{max_off:g}h "
 PY
 ```
 
-Default to **03:30 local** and bump later only if the timezone's DST offset
-would push the run to UTC midnight or earlier. Treat the design spec's
-canonical `0 3 * * *` (03:00 UTC) as the target window.
+Default to **03:30 local** for the once-a-day case, and bump later only if
+the timezone's DST offset would push the run to UTC midnight or earlier.
+Treat the design spec's canonical `0 3 * * *` (03:00 UTC) as the anchor
+window. For a multi-run cadence, anchor the `*/k` step at that base hour's
+minute (e.g. 4/day from a 03:30 base → `30 */6 * * *`) so one run lands in
+the post-midnight window and the rest space evenly across the day.
 
 ## Step 3 — CONFIRM with the user before creating
 
@@ -94,11 +137,14 @@ This creates a recurring, autonomous cloud routine that consumes usage every
 night. Show the user, in one block, exactly what you're about to do:
 
 - routine name: `journal-consolidator`
-- chosen local run time + its UTC equivalent (winter and summer)
+- chosen cadence (runs per day) and the cron expression it maps to, plus the
+  per-account daily cap so they can confirm it fits their plan
+- chosen local run time(s) + their UTC equivalent (winter and summer)
 - data repo URL it will clone
 - that it needs the git-crypt key in `GIT_CRYPT_KEY_B64`
 
-Ask them to confirm (or adjust the time). **Do not proceed without a yes.**
+Ask them to confirm (or adjust the cadence/time). **Do not proceed without a
+yes.**
 If they decline, stop and leave nothing created.
 
 ## Step 4 — Create the routine (keep the key out of the transcript)
@@ -110,15 +156,18 @@ transcript shows the substitution, not the secret:
 ```bash
 claude -p --bare \
   --allowedTools "Bash,Read" \
-  "/schedule create a nightly routine named 'journal-consolidator' that runs \
-at <LOCAL_TIME> in my local timezone. The routine prompt is the contents of \
+  "/schedule create a routine named 'journal-consolidator' that runs \
+<SCHEDULE>. The routine prompt is the contents of \
 ~/claude-journal/consolidator/ROUTINE.md. It needs the environment variable \
 GIT_CRYPT_KEY_B64 set to $(base64 -w0 ~/.claude/journal/git-crypt.key) and \
 should clone <REPO_URL> before running."
 ```
 
-- Substitute `<LOCAL_TIME>` and `<REPO_URL>` yourself; leave the
-  `$(base64 …)` literal so the shell expands it.
+- Substitute `<SCHEDULE>` and `<REPO_URL>` yourself; leave the
+  `$(base64 …)` literal so the shell expands it. For the once-a-day default,
+  `<SCHEDULE>` is `at <LOCAL_TIME> in my local timezone`; for a multi-run
+  cadence, `<SCHEDULE>` is `on the cron schedule '<CRON>'` (e.g.
+  `'30 */6 * * *'` for 4×/day).
 - On macOS, `base64` has no `-w0` flag — drop it (`$(base64 ~/.claude/...)`).
 - **Never** run a command that prints the key (no bare `base64 …`, no `echo`
   of `GIT_CRYPT_KEY_B64`). If a step would surface the raw key, redact it.
@@ -128,7 +177,8 @@ should clone <REPO_URL> before running."
 Run `claude -p --bare "/schedule list"` again and confirm
 `journal-consolidator` now appears. Report to the user:
 
-- the routine name, local time, and UTC equivalent
+- the routine name, its cadence (runs/day + cron), local time, and UTC
+  equivalent
 - that the prompt mirror lives in the cloud config and the **canonical**
   source is `~/claude-journal/consolidator/ROUTINE.md` — if they edit that
   file, they must paste the new body into the routine via `/schedule update`
@@ -138,8 +188,12 @@ Run `claude -p --bare "/schedule list"` again and confirm
 
 ## Guardrails
 
-- The routine is **once per account**. Never create a duplicate — always do
-  the Step 1 list check first.
+- The routine is **once per account** (one routine, however many times a day
+  it runs). Never create a duplicate — always do the Step 1 list check first.
+- Respect the platform limits: never propose a cadence finer than hourly
+  (`/schedule` rejects it) or one that would exceed the user's per-account
+  daily run cap (≈15/day on the standard tier). When unsure, default to once
+  a day.
 - Never let the raw git-crypt key (or its base64) appear in the transcript or
   any echoed command. Use command substitution; redact if anything leaks.
 - This is a consequential, recurring, cloud-side action. The Step 3
