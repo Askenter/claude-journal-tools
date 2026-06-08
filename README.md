@@ -58,15 +58,21 @@ Install git-crypt:
 ```
 
 That registers the `Stop` and `SessionStart` hooks and the
-`/claude-journal:journal` skill. The hooks won't do anything useful until
-you create a data repo and name the device — the two one-time steps below.
+`/claude-journal:journal`, `/claude-journal:journal-setup`, and
+`/claude-journal:journal-schedule` skills. The hooks won't do anything useful
+until you create a data repo and name the device — the two one-time steps below.
 
 ## Create your data repo (once, ever — first device only)
 
 If you don't already have a `claude-journal` data repo, bootstrap one. This
 creates the private GitHub repo, lays out the encrypted directory skeleton,
 initializes git-crypt, **generates your key**, and seeds a generic
-`consolidator/ROUTINE.md`:
+`consolidator/ROUTINE.md`.
+
+**Easiest path:** run `/claude-journal:journal-setup`. It checks your tools,
+sets your git identity, signs you into `gh` if a remote is wanted, then walks
+you through the bootstrap below (the key stays in your terminal, never the
+transcript). Prefer the manual route? It's exactly what the skill runs:
 
 ```bash
 git clone git@github.com:askenter/claude-journal-tools.git ~/claude-journal-tools

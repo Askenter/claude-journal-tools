@@ -12,7 +12,8 @@ ever leaking the git-crypt key into the transcript.
 
 ## Preconditions (check first, bail clearly if unmet)
 
-The data repo must already exist and be initialized (run the bootstrap first).
+The data repo must already exist and be initialized (run
+`/claude-journal:journal-setup`, or the bootstrap directly, first).
 Verify, and stop with a specific message if any fails:
 
 1. `~/claude-journal/consolidator/ROUTINE.md` exists (the routine's prompt
@@ -47,11 +48,29 @@ Compute, don't guess. Use Python:
 
 ```bash
 python3 - <<'PY'
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
-import time, os
-tz = ZoneInfo(open("/etc/timezone").read().strip()) if os.path.exists("/etc/timezone") \
-     else datetime.now().astimezone().tzinfo
+from pathlib import Path
+import os
+
+
+def system_zone():
+    # Resolve the IANA zone NAME so ZoneInfo is DST-aware. The old
+    # datetime.now().astimezone().tzinfo fallback returns a FIXED-offset tz
+    # whose utcoffset() ignores the date, which silently collapses the
+    # Jan-vs-Jul check below on macOS/RHEL (no /etc/timezone there).
+    if os.environ.get("TZ"):
+        return ZoneInfo(os.environ["TZ"])
+    p = Path("/etc/timezone")          # Debian/Ubuntu convention
+    if p.exists():
+        return ZoneInfo(p.read_text().strip())
+    link = Path("/etc/localtime")      # macOS, RHEL, Arch, Fedora, ...
+    if link.is_symlink():
+        return ZoneInfo(os.readlink(link).split("zoneinfo/", 1)[-1])
+    raise SystemExit("cannot determine system timezone — pass it explicitly")
+
+
+tz = system_zone()
 # max offset across the year (DST), in hours:
 now = datetime.now()
 offs = {datetime(now.year, m, 15, tzinfo=tz).utcoffset() for m in (1, 7)}
