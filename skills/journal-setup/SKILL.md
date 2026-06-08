@@ -144,6 +144,16 @@ Once verified, tell the user the two remaining steps (do not run them here):
 2. **Create the nightly routine, once per account**, with
    `/journal-schedule`.
 
+Also point out the **consolidator prompt**: bootstrap seeded
+`consolidator/ROUTINE.md` into the new data repo from this tools repo's
+bundled template (`$TOOLS/tools/journal/templates/ROUTINE.md`). That data-repo
+copy is the **source of truth** for what the nightly routine does — distilling
+digests, memories, skill proposals, and CLAUDE.md-edit proposals. Tell the
+user they can **edit it** to tune the distillation rules (or swap in their own
+prompt entirely); after any edit they re-paste the body into the cloud routine
+via `/journal-schedule` (or `/schedule update journal-consolidator`), since the
+cloud config holds a copy that must be kept in sync.
+
 ## Guardrails
 
 - **Never** let the git-crypt key (or its base64) reach your tool output. Do
