@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+, Anthropic Python SDK (`anthropic` ≥0.40), `gh` CLI, git, pytest, pytest-mock. No new runtime services.
 
-**Spec:** see [docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md](../specs/2026-04-28-cognitive-consolidation-design.md).
+**Spec:** see [docs/superpowers/specs/cognitive-consolidation-design.md](../specs/cognitive-consolidation-design.md).
 
 ---
 
@@ -39,7 +39,7 @@ Phase 1 produces working, testable software: every Claude session on every initi
 ## File structure
 
 ```
-ASEP/
+myproject/
 ├── tools/journal/                          # NEW — canonical source for journal logic
 │   ├── __init__.py
 │   ├── breadcrumb.py                       # Breadcrumb dataclass + to_dict
@@ -66,8 +66,8 @@ ASEP/
 ├── scripts/
 │   └── init-journal-device.sh              # NEW — thin wrapper around init_device.py
 └── docs/superpowers/
-    ├── specs/2026-04-28-cognitive-consolidation-design.md   # exists
-    └── plans/2026-04-28-cognitive-consolidation-phase1.md   # this file
+    ├── specs/cognitive-consolidation-design.md   # exists
+    └── plans/cognitive-consolidation-phase1.md   # this file
 ```
 
 **Why pure-Python modules + a thin hook entrypoint:** the hook is shell-callable, but all real logic is in plain Python so we can unit-test it (the hook itself is just `parse stdin → call function → write result`). Matches the existing code style under `src/`.
@@ -108,7 +108,7 @@ each device and (eventually) a nightly Claude routine.
 Do not edit manually unless you know what you are doing.
 
 Design spec:
-https://github.com/askenter/ASEP/blob/main/docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
+specs/cognitive-consolidation-design.md
 EOF
 git add . && git commit -m "init: bootstrap claude-journal layout"
 git push -u origin main
@@ -126,12 +126,12 @@ Expected output of the second command: `CHANGELOG.md README.md consolidator dige
 - [ ] **Step 4: Commit a marker note in this repo so the design and the journal stay linked**
 
 ```bash
-cd /home/opc/ASEP
-echo "" >> docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
-echo "## Repo bootstrap" >> docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
-echo "" >> docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
-echo "Live at: https://github.com/askenter/claude-journal (private)" >> docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
-git add docs/superpowers/specs/2026-04-28-cognitive-consolidation-design.md
+cd /home/you/myproject
+echo "" >> docs/superpowers/specs/cognitive-consolidation-design.md
+echo "## Repo bootstrap" >> docs/superpowers/specs/cognitive-consolidation-design.md
+echo "" >> docs/superpowers/specs/cognitive-consolidation-design.md
+echo "Live at: https://github.com/askenter/claude-journal (private)" >> docs/superpowers/specs/cognitive-consolidation-design.md
+git add docs/superpowers/specs/cognitive-consolidation-design.md
 git commit -m "docs(spec): record claude-journal repo as bootstrapped"
 ```
 
@@ -158,7 +158,7 @@ def test_structural_only_breadcrumb_serializes():
     bc = Breadcrumb(
         session_id="abc-123",
         device="laptop",
-        project="-home-opc-ASEP",
+        project="-home-you-myproject",
         started_at=datetime(2026, 4, 28, 9, 14, 32, tzinfo=timezone.utc),
         ended_at=datetime(2026, 4, 28, 10, 2, 18, tzinfo=timezone.utc),
         files_touched=["src/api.py"],
@@ -169,7 +169,7 @@ def test_structural_only_breadcrumb_serializes():
     assert out == {
         "session_id": "abc-123",
         "device": "laptop",
-        "project": "-home-opc-ASEP",
+        "project": "-home-you-myproject",
         "started_at": "2026-04-28T09:14:32+00:00",
         "ended_at":   "2026-04-28T10:02:18+00:00",
         "files_touched": ["src/api.py"],
@@ -182,7 +182,7 @@ def test_augmented_breadcrumb_includes_synthesized_fields():
     bc = Breadcrumb(
         session_id="abc-123",
         device="laptop",
-        project="-home-opc-ASEP",
+        project="-home-you-myproject",
         started_at=datetime(2026, 4, 28, 9, 14, 32, tzinfo=timezone.utc),
         ended_at=datetime(2026, 4, 28, 10, 2, 18, tzinfo=timezone.utc),
         files_touched=[],
@@ -214,7 +214,7 @@ def test_first_prompt_truncated_to_200_chars():
 - [ ] **Step 2: Run tests, verify failure**
 
 ```bash
-cd /home/opc/ASEP
+cd /home/you/myproject
 PYTHONPATH=. venv/bin/pytest tests/journal/test_breadcrumb.py -v
 ```
 Expected: FAIL with `ModuleNotFoundError: No module named 'tools.journal'`.
@@ -329,12 +329,12 @@ def test_extract_structural_from_transcript():
     out = extract_structural(
         session_id="sess-1",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=FIXTURES / "transcript_simple.jsonl",
     )
     assert out["session_id"] == "sess-1"
     assert out["device"] == "laptop"
-    assert out["project"] == "-home-opc-ASEP"
+    assert out["project"] == "-home-you-myproject"
     assert out["files_touched"] == ["src/api.py", "frontend/components/Header.tsx"]
     assert out["skills_invoked"] == ["superpowers:brainstorming"]
     assert out["first_prompt"].startswith("Add a new endpoint")
@@ -348,7 +348,7 @@ def test_extract_handles_empty_transcript(tmp_path):
     out = extract_structural(
         session_id="sess-2",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=empty,
     )
     assert out["files_touched"] == []
@@ -360,7 +360,7 @@ def test_extract_handles_missing_transcript():
     out = extract_structural(
         session_id="sess-3",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=Path("/nonexistent/transcript.jsonl"),
     )
     assert out["files_touched"] == []
@@ -397,7 +397,7 @@ _TOOLS_THAT_TOUCH_FILES = {"Edit", "Write", "NotebookEdit"}
 def _project_key(project_dir: str) -> str:
     """Slugify an absolute path into the auto-memory key format.
 
-    /home/opc/ASEP -> -home-opc-ASEP
+    /home/you/myproject -> -home-you-myproject
     """
     return project_dir.replace("/", "-")
 
@@ -726,7 +726,7 @@ def test_push_writes_file_and_succeeds(monkeypatch, tmp_path):
     breadcrumb = {
         "session_id": "abc-123",
         "device": "laptop",
-        "project": "-home-opc-ASEP",
+        "project": "-home-you-myproject",
         "started_at": "2026-04-28T09:00:00+00:00",
         "ended_at": "2026-04-28T10:00:00+00:00",
     }
@@ -980,7 +980,7 @@ def test_on_stop_happy_path(monkeypatch, tmp_path, capsys):
     payload = {
         "session_id": "sess-1",
         "transcript_path": str(transcript),
-        "cwd": "/home/opc/ASEP",
+        "cwd": "/home/you/myproject",
     }
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     rc = on_stop.main()
@@ -991,7 +991,7 @@ def test_on_stop_happy_path(monkeypatch, tmp_path, capsys):
     sent = fake_push.call_args.kwargs["breadcrumb"]
     assert sent["session_id"] == "sess-1"
     assert sent["device"] == "laptop"
-    assert sent["project"] == "-home-opc-ASEP"
+    assert sent["project"] == "-home-you-myproject"
     assert sent["session_summary"] == "Did the thing."
     assert sent["files_touched"] == ["src/api.py"]
 
@@ -1147,7 +1147,7 @@ def test_on_start_pulls_repo(monkeypatch, tmp_path):
     fake_pull = MagicMock(return_value=True)
     monkeypatch.setattr("tools.journal.hooks.on_start.pull_journal", fake_pull)
 
-    payload = {"session_id": "sess-1", "cwd": "/home/opc/ASEP"}
+    payload = {"session_id": "sess-1", "cwd": "/home/you/myproject"}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     rc = on_start.main()
 
@@ -1456,7 +1456,7 @@ Validates the full pipeline runs against the real GitHub repo from this device.
 - [ ] **Step 1: Run all unit tests**
 
 ```bash
-cd /home/opc/ASEP
+cd /home/you/myproject
 PYTHONPATH=. venv/bin/pytest tests/journal/ -v
 ```
 Expected: all passing (16+ tests across the 8 test modules above).
@@ -1477,16 +1477,16 @@ Expected:
 
 ```bash
 # Use the most recent transcript from this project
-LATEST_TRANSCRIPT=$(ls -t ~/.claude/projects/-home-opc-ASEP/*.jsonl 2>/dev/null | head -1)
+LATEST_TRANSCRIPT=$(ls -t ~/.claude/projects/-home-you-myproject/*.jsonl 2>/dev/null | head -1)
 SID=$(basename "$LATEST_TRANSCRIPT" .jsonl)
 
 PAYLOAD=$(jq -nc \
   --arg sid "$SID" \
   --arg t "$LATEST_TRANSCRIPT" \
-  '{session_id: $sid, transcript_path: $t, cwd: "/home/opc/ASEP"}')
+  '{session_id: $sid, transcript_path: $t, cwd: "/home/you/myproject"}')
 
-echo "$PAYLOAD" | PYTHONPATH=/home/opc/ASEP \
-  /home/opc/ASEP/venv/bin/python /home/opc/ASEP/tools/journal/hooks/on_stop.py
+echo "$PAYLOAD" | PYTHONPATH=/home/you/myproject \
+  /home/you/myproject/venv/bin/python /home/you/myproject/tools/journal/hooks/on_stop.py
 ```
 Expected: command exits 0 within ~5–10 seconds (the Haiku call dominates).
 
@@ -1506,9 +1506,9 @@ Should show structural fields plus (if Haiku succeeded) `session_summary`, `deci
 - [ ] **Step 5: Verify SessionStart hook pulls without error**
 
 ```bash
-echo '{"session_id":"smoke","cwd":"/home/opc/ASEP"}' | \
-  PYTHONPATH=/home/opc/ASEP \
-  /home/opc/ASEP/venv/bin/python /home/opc/ASEP/tools/journal/hooks/on_start.py
+echo '{"session_id":"smoke","cwd":"/home/you/myproject"}' | \
+  PYTHONPATH=/home/you/myproject \
+  /home/you/myproject/venv/bin/python /home/you/myproject/tools/journal/hooks/on_start.py
 ```
 Expected: exit 0, no output, `~/claude-journal` is up to date with origin.
 
@@ -1520,8 +1520,8 @@ cd ~/claude-journal
 git remote set-url origin git@github.com:invalid/invalid.git
 
 # Re-run the Stop hook smoke test
-echo "$PAYLOAD" | PYTHONPATH=/home/opc/ASEP \
-  /home/opc/ASEP/venv/bin/python /home/opc/ASEP/tools/journal/hooks/on_stop.py
+echo "$PAYLOAD" | PYTHONPATH=/home/you/myproject \
+  /home/you/myproject/venv/bin/python /home/you/myproject/tools/journal/hooks/on_stop.py
 
 # Confirm the breadcrumb is buffered
 cat ~/.claude/journal-buffer.jsonl | head -5
@@ -1530,8 +1530,8 @@ cat ~/.claude/journal-buffer.jsonl | head -5
 git remote set-url origin git@github.com:askenter/claude-journal.git
 
 # Re-run; backlog should drain
-echo "$PAYLOAD" | PYTHONPATH=/home/opc/ASEP \
-  /home/opc/ASEP/venv/bin/python /home/opc/ASEP/tools/journal/hooks/on_stop.py
+echo "$PAYLOAD" | PYTHONPATH=/home/you/myproject \
+  /home/you/myproject/venv/bin/python /home/you/myproject/tools/journal/hooks/on_stop.py
 
 # Buffer should now be empty
 cat ~/.claude/journal-buffer.jsonl
@@ -1541,10 +1541,10 @@ Expected: buffer fills on push failure, drains on next successful push.
 - [ ] **Step 7: Commit acceptance evidence**
 
 ```bash
-cd /home/opc/ASEP
+cd /home/you/myproject
 echo "Phase 1 acceptance smoke completed on $(date -Iseconds) by $(whoami)@$(hostname)" \
-  >> docs/superpowers/plans/2026-04-28-cognitive-consolidation-phase1.md
-git add docs/superpowers/plans/2026-04-28-cognitive-consolidation-phase1.md
+  >> docs/superpowers/plans/cognitive-consolidation-phase1.md
+git add docs/superpowers/plans/cognitive-consolidation-phase1.md
 git commit -m "docs(plan): record Phase 1 acceptance smoke run"
 ```
 

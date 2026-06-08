@@ -117,7 +117,7 @@ visible. These are maintained by hand — match the formats exactly.
 ```
 2026-06-08 ~skill proposed global/condition-based-waiting — distilled from 2 sessions on 2026-06-05, 2026-06-07
 2026-06-09 +skill accepted global/condition-based-waiting
-2026-06-09 -skill skipped  project:-home-opc-ASEP/flaky-retry
+2026-06-09 -skill skipped  project:-home-you-myproject/flaky-retry
 ```
 
 `~` proposed (written by the consolidator), `+` accepted, `-` skipped. If the

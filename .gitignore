@@ -2,3 +2,18 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# macOS
+.DS_Store
+
+# secrets and key material (never commit these)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*keyfile*
+git-crypt-key*

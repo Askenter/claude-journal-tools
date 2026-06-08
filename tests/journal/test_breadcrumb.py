@@ -6,7 +6,7 @@ def test_breadcrumb_serializes_structural_fields():
     bc = Breadcrumb(
         session_id="abc-123",
         device="laptop",
-        project="-home-opc-ASEP",
+        project="-home-you-myproject",
         started_at=datetime(2026, 4, 28, 9, 14, 32, tzinfo=timezone.utc),
         ended_at=datetime(2026, 4, 28, 10, 2, 18, tzinfo=timezone.utc),
         files_touched=["src/api.py"],
@@ -17,7 +17,7 @@ def test_breadcrumb_serializes_structural_fields():
     assert out == {
         "session_id": "abc-123",
         "device": "laptop",
-        "project": "-home-opc-ASEP",
+        "project": "-home-you-myproject",
         "started_at": "2026-04-28T09:14:32+00:00",
         "ended_at":   "2026-04-28T10:02:18+00:00",
         "files_touched": ["src/api.py"],

@@ -9,12 +9,12 @@ def test_extract_structural_from_transcript():
     out = extract_structural(
         session_id="sess-1",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=FIXTURES / "transcript_simple.jsonl",
     )
     assert out["session_id"] == "sess-1"
     assert out["device"] == "laptop"
-    assert out["project"] == "-home-opc-ASEP"
+    assert out["project"] == "-home-you-myproject"
     assert out["files_touched"] == ["src/api.py", "frontend/components/Header.tsx"]
     assert out["skills_invoked"] == ["superpowers:brainstorming"]
     assert out["first_prompt"].startswith("Add a new endpoint")
@@ -28,7 +28,7 @@ def test_extract_handles_empty_transcript(tmp_path):
     out = extract_structural(
         session_id="sess-2",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=empty,
     )
     assert out["files_touched"] == []
@@ -42,7 +42,7 @@ def test_extract_handles_missing_transcript():
     out = extract_structural(
         session_id="sess-3",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=Path("/nonexistent/transcript.jsonl"),
     )
     assert out["files_touched"] == []
@@ -64,7 +64,7 @@ def test_extract_tolerates_malformed_timestamps(tmp_path):
     out = extract_structural(
         session_id="sess-bad",
         device="laptop",
-        project_dir="/home/opc/ASEP",
+        project_dir="/home/you/myproject",
         transcript_path=bad,
     )
     # The two malformed-timestamp lines are still processed for content

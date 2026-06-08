@@ -40,7 +40,7 @@ def test_push_writes_file_and_succeeds(monkeypatch, tmp_path):
     breadcrumb = {
         "session_id": "abc-123",
         "device": "laptop",
-        "project": "-home-opc-ASEP",
+        "project": "-home-you-myproject",
         "started_at": "2026-04-28T09:00:00+00:00",
         "ended_at": "2026-04-28T10:00:00+00:00",
     }

@@ -34,15 +34,21 @@ agents, with ASCII diagrams throughout:
 ```
 claude-journal-tools/
 ├── .claude-plugin/
-│   ├── plugin.json        plugin manifest (hooks + auto-discovered skill)
+│   ├── plugin.json        plugin manifest (hooks + auto-discovered skills)
 │   └── marketplace.json   marketplace entry for /plugin install
 ├── hooks/hooks.json       declarative Stop + SessionStart hook wiring
 ├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
-├── tests/journal/         pytest suite (stdlib only, ~28 tests)
-├── scripts/               init-journal-device.sh (data-repo setup)
-├── skills/journal/        /journal slash-command skill (accept/skip/edit)
-└── docs/                  design spec + phase plans
+├── tests/journal/         pytest suite (stdlib only, 106 tests across 13 files)
+├── scripts/               bootstrap-journal-repo.sh + init-journal-device.sh (data-repo setup)
+├── skills/                three slash-command skills (see below)
+└── docs/                  design specs, phase plans, architecture + reference guides
 ```
+
+Skills shipped under `skills/`:
+
+- `journal/` — resolve pending consolidation proposals via accept, skip, or edit
+- `journal-setup/` — guided first-time setup that bootstraps your data repo
+- `journal-schedule/` — create the nightly Phase 2 consolidator routine via `/schedule`
 
 Runtime is **Python 3.11+, standard library only** — no `pip install`, no
 `node_modules`. The hooks run under whatever `python3` is on your `PATH`.

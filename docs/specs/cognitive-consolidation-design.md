@@ -110,7 +110,7 @@ claude-journal/
 ```
 
 `<project-key>` is the slugified absolute project path (e.g.,
-`-home-opc-ASEP`), matching the auto-memory directory naming convention in
+`-home-you-myproject`), matching the auto-memory directory naming convention in
 `~/.claude/projects/`.
 
 `<device>` is a stable name registered at first-time setup (e.g., `laptop`,
@@ -167,7 +167,7 @@ A breadcrumb under `raw/<device>/<date>/<session-id>.json` looks like:
 {
   "session_id": "0a7e6abf-4198-4441-ab11-9e95d603dc63",
   "device": "laptop",
-  "project": "-home-opc-ASEP",
+  "project": "-home-you-myproject",
   "started_at": "2026-04-28T09:14:32Z",
   "ended_at":   "2026-04-28T10:02:18Z",
   "files_touched": [
@@ -390,7 +390,7 @@ deploys via Docker Compose now, but CLAUDE.md still says Swarm".
 
 **Output:** routine writes a proposal file to
 `proposals/<date>-<project>.md` containing:
-- The target file path (e.g., `ASEP/CLAUDE.md`)
+- The target file path (e.g., `myproject/CLAUDE.md`)
 - The proposed diff in unified-diff format
 - A one-paragraph rationale citing which breadcrumbs drove the change
 
@@ -399,7 +399,7 @@ a system-reminder block:
 
 ```
 📓 claude-journal has 1 proposal from 2026-04-28:
-  ASEP/CLAUDE.md (lines 47-52): replace "Swarm" with "Docker Compose"
+  myproject/CLAUDE.md (lines 47-52): replace "Swarm" with "Docker Compose"
   Rationale: 4 sessions this week deployed via compose; deploy.sh has no
     swarm commands.
   Reply "/journal accept", "/journal skip", or "/journal edit"

@@ -13,7 +13,7 @@ def test_on_start_pulls_repo(monkeypatch, tmp_path):
     fake_pull = MagicMock(return_value=True)
     monkeypatch.setattr("tools.journal.hooks.on_start.pull_journal", fake_pull)
 
-    payload = {"session_id": "sess-1", "cwd": "/home/opc/ASEP"}
+    payload = {"session_id": "sess-1", "cwd": "/home/you/myproject"}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     rc = on_start.main()
 
@@ -41,7 +41,7 @@ def test_on_start_calls_sync_memories_and_skills(monkeypatch, tmp_path):
     monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_memories", fake_sync_mem)
     monkeypatch.setattr("tools.journal.hooks.on_start.sync_all_skills", fake_sync_skl)
 
-    payload = {"session_id": "x", "cwd": "/home/opc/ASEP"}
+    payload = {"session_id": "x", "cwd": "/home/you/myproject"}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     on_start.main()
     fake_sync_mem.assert_called_once()
@@ -62,7 +62,7 @@ def test_on_start_emits_proposal_context_when_present(monkeypatch, tmp_path, cap
         lambda **kw: "📓 surface this",
     )
 
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/you/myproject"})))
     on_start.main()
     out = capsys.readouterr().out
     parsed = json.loads(out)
@@ -82,7 +82,7 @@ def test_on_start_emits_nothing_when_no_proposals(monkeypatch, tmp_path, capsys)
         lambda **kw: None,
     )
 
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/you/myproject"})))
     on_start.main()
     assert capsys.readouterr().out == ""
 
@@ -102,7 +102,7 @@ def test_on_start_emits_locked_warning_when_repo_locked(monkeypatch, tmp_path, c
         lambda **kw: None,
     )
 
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/you/myproject"})))
     on_start.main()
     out = capsys.readouterr().out
     parsed = json.loads(out)
@@ -122,7 +122,7 @@ def test_on_start_combines_locked_warning_with_proposals(monkeypatch, tmp_path, 
         lambda **kw: "📓 surface this",
     )
 
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/you/myproject"})))
     on_start.main()
     out = capsys.readouterr().out
     parsed = json.loads(out)
@@ -151,7 +151,7 @@ def test_on_start_emits_stale_warning_when_pull_fails(monkeypatch, tmp_path, cap
         lambda **kw: None,
     )
 
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/opc/ASEP"})))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": "/home/you/myproject"})))
     on_start.main()
     out = capsys.readouterr().out
     parsed = json.loads(out)

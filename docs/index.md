@@ -89,7 +89,7 @@ Claude *behaves* — wait for your explicit `/journal accept`.
 - **Consolidator** — the once-per-account nightly Claude Code routine (created
   via `/schedule`) that turns raw breadcrumbs into distilled artifacts.
 - **Project key** — an absolute project path slugified by replacing `/` with
-  `-` (e.g. `/home/opc/ASEP` → `-home-opc-ASEP`). Used to bucket memories and
+  `-` (e.g. `/home/you/myproject` → `-home-you-myproject`). Used to bucket memories and
   proposals per project.
 - **Proposal** — a distilled change that alters Claude's behavior (a feedback
   rule, a CLAUDE.md edit, an edit to an existing skill, or a brand-new skill

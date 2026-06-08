@@ -25,11 +25,11 @@ def _write_index(dir: Path, project: str, entries: list[str]) -> None:
 
 
 def test_sync_copies_project_memory_files(tmp_path: Path):
-    journal_dir = tmp_path / "journal" / "memories" / "-home-opc-ASEP"
+    journal_dir = tmp_path / "journal" / "memories" / "-home-you-myproject"
     device_dir = tmp_path / "device" / "memory"
     _write_memory(journal_dir, "deployment.md")
     _write_memory(journal_dir, "data-counts.md")
-    _write_index(journal_dir, "-home-opc-ASEP", [
+    _write_index(journal_dir, "-home-you-myproject", [
         "- [Deployment](deployment.md) — split-node arch",
         "- [Data counts](data-counts.md) — current totals",
     ])
@@ -37,7 +37,7 @@ def test_sync_copies_project_memory_files(tmp_path: Path):
     result = sync_project_memories(
         journal_project_dir=journal_dir,
         device_project_memory_dir=device_dir,
-        project="-home-opc-ASEP",
+        project="-home-you-myproject",
     )
 
     assert (device_dir / "deployment.md").exists()

@@ -12,7 +12,7 @@ _TOOLS_THAT_TOUCH_FILES = {"Edit", "Write", "NotebookEdit"}
 def _project_key(project_dir: str) -> str:
     """Slugify an absolute path into the auto-memory key format.
 
-    /home/opc/ASEP -> -home-opc-ASEP
+    /home/you/myproject -> -home-you-myproject
     """
     return project_dir.replace("/", "-")
 

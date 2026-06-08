@@ -115,7 +115,7 @@ The journal is **personal and private — it does not leave the machine.**
 ## Where the project key comes from
 
 Many paths are keyed by **project key** = the absolute project directory with
-`/` replaced by `-` (e.g. `/home/opc/ASEP` → `-home-opc-ASEP`). Memories,
+`/` replaced by `-` (e.g. `/home/you/myproject` → `-home-you-myproject`). Memories,
 proposals, and the device-side memory tree all use this slug, so the same
 project lines up across devices.
 

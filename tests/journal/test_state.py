@@ -29,10 +29,10 @@ def test_write_lands_at_state_per_project_path(tmp_path: Path):
     journal = tmp_path / "journal"
     target = write_state_claudemd(
         journal_repo=journal,
-        project_key="-home-opc-ASEP",
+        project_key="-home-you-myproject",
         content="# CLAUDE.md content\n",
     )
-    assert target == journal / "state" / "-home-opc-ASEP" / "CLAUDE.md"
+    assert target == journal / "state" / "-home-you-myproject" / "CLAUDE.md"
     assert target.read_text() == "# CLAUDE.md content\n"
 
 

@@ -31,7 +31,7 @@ def _arrange(monkeypatch, tmp_path, payload):
 def test_on_stop_pushes_structural_breadcrumb(monkeypatch, tmp_path):
     fake_push = _arrange(
         monkeypatch, tmp_path,
-        payload={"session_id": "sess-1", "cwd": "/home/opc/ASEP"},
+        payload={"session_id": "sess-1", "cwd": "/home/you/myproject"},
     )
 
     rc = on_stop.main()
@@ -41,7 +41,7 @@ def test_on_stop_pushes_structural_breadcrumb(monkeypatch, tmp_path):
     sent = fake_push.call_args.kwargs["breadcrumb"]
     assert sent["session_id"] == "sess-1"
     assert sent["device"] == "laptop"
-    assert sent["project"] == "-home-opc-ASEP"
+    assert sent["project"] == "-home-you-myproject"
     assert sent["files_touched"] == ["src/api.py"]
     assert fake_push.call_args.kwargs["date_str"] == "2026-04-28"
     # No LLM-augmented fields in Phase 1.
@@ -54,7 +54,7 @@ def test_on_stop_pushes_structural_breadcrumb(monkeypatch, tmp_path):
 def test_on_stop_writes_project_state_when_claudemd_exists(monkeypatch, tmp_path):
     """When the project has a CLAUDE.md, the Stop hook should snapshot it
     into journal/state/<project>/CLAUDE.md before pushing."""
-    project = tmp_path / "ASEP"
+    project = tmp_path / "myproject"
     project.mkdir()
     (project / "CLAUDE.md").write_text("# project rules\n")
     journal = tmp_path / "claude-journal"
@@ -121,7 +121,7 @@ def test_on_stop_swallows_missing_device_name(monkeypatch, tmp_path):
     payload = {
         "session_id": "sess-3",
         "transcript_path": str(transcript),
-        "cwd": "/home/opc/ASEP",
+        "cwd": "/home/you/myproject",
     }
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     # read_device_name raises RuntimeError; main must swallow.

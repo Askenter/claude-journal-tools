@@ -59,13 +59,13 @@ def test_sync_global_updates_when_content_changes(tmp_path: Path):
 
 def test_sync_project_skills_lands_per_project(tmp_path: Path):
     journal = tmp_path / "journal"
-    _write_skill(journal / "skills" / "projects" / "-home-opc-ASEP", "asep-only")
+    _write_skill(journal / "skills" / "projects" / "-home-you-myproject", "myproject-only")
     projects_dir = tmp_path / "claude" / "projects"
 
     results = sync_project_skills(journal_repo=journal, claude_projects_dir=projects_dir)
-    target = projects_dir / "-home-opc-ASEP" / ".claude" / "skills" / "asep-only" / "SKILL.md"
+    target = projects_dir / "-home-you-myproject" / ".claude" / "skills" / "myproject-only" / "SKILL.md"
     assert target.exists()
-    assert any(r.scope == "project:-home-opc-ASEP" for r in results)
+    assert any(r.scope == "project:-home-you-myproject" for r in results)
 
 
 def test_sync_all_skills_returns_empty_when_no_skills_dir(tmp_path: Path):
