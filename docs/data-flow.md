@@ -125,7 +125,7 @@ cloud **once per account**. It is the only LLM step.
         │
         ▼
  ┌──────────────────────────────────────────────────────────────────┐
- │ 1. clone the private repo over HTTPS (GH_TOKEN, never logged)         │
+ │ 1. clone the private repo over HTTPS (GH_TOKEN, never logged)     │
  │ 2. git-crypt unlock  (key from GIT_CRYPT_KEY_B64, never logged)   │
  │ 3. dates = yesterday+today in UTC                                 │
  │ 4. gather raw/*/<target>/*.json  across ALL devices              │

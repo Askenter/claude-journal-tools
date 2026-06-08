@@ -16,7 +16,7 @@ Keep these straight; almost everything else follows from the split.
 │ .claude-plugin/   plugin manifest    │     │ raw/        breadcrumbs+transcripts  │ 🔒
 │ hooks/hooks.json  Stop + SessionStart│     │ digests/    per-device daily summary │ 🔒
 │ tools/journal/    hook impl (stdlib) │     │ memories/   distilled facts          │ 🔒
-│ skills/           /journal* skills   │     │ skills/     distilled skills         │ 🔒
+│ skills/           the /journal skill │     │ skills/     distilled skills         │ 🔒
 │ scripts/          bootstrap + init   │     │ proposals/  pending behavior changes │ 🔒
 │ tests/            pytest suite       │     │ state/      CLAUDE.md snapshots      │ 🔒
 │ docs/             this documentation │     │ consolidator/ROUTINE.md  (plaintext) │

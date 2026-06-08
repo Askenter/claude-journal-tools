@@ -40,7 +40,7 @@ claude-journal-tools/
 ├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
 ├── tests/journal/         pytest suite (stdlib only, 106 tests across 13 files)
 ├── scripts/               bootstrap-journal-repo.sh + init-journal-device.sh (data-repo setup)
-├── skills/                three slash-command skills (see below)
+├── skills/                the /journal slash-command skill (see below)
 └── docs/                  design specs, phase plans, architecture + reference guides
 ```
 

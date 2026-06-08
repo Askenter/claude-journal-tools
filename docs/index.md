@@ -9,7 +9,7 @@ propagates the results back to every device — so Claude gets a little better a
 It is two git repositories working together:
 
 - **`claude-journal-tools`** — the device-side code you install (this repo): a
-  Claude Code *plugin* (Stop + SessionStart hooks) plus three skills.
+  Claude Code *plugin* (Stop + SessionStart hooks) plus the `/journal` skill.
 - **`claude-journal`** — *your own* private, git-crypt-encrypted **data repo**
   that holds the breadcrumbs and everything distilled from them. You create it;
   this tools repo ships no data and no key.

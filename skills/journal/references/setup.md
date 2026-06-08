@@ -146,8 +146,8 @@ hidden and nothing echoes the token:
 behaves the same in bash and zsh — `read -p` means something different in zsh.)
 
 Confirm the token authenticates **without printing it** (a repo-scoped push
-check can't run yet — the repo doesn't exist until Step 6, so `/journal schedule`
-does that check later):
+check can't run yet — the repo doesn't exist until the bootstrap in Step 5, so
+`/journal schedule` does that check later):
 
 ```bash
 GH_TOKEN="$(cat ~/.claude/journal/gh-token)" gh api rate_limit --jq '.rate.limit' >/dev/null && echo 'token authenticates' || echo 'token rejected — re-check it'
