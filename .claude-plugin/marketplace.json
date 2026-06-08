@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "name": "claude-journal-tools",
+  "owner": {
+    "name": "Anthony Skenter"
+  },
+  "description": "Marketplace for the claude-journal cognitive-consolidation pipeline.",
+  "plugins": [
+    {
+      "name": "claude-journal",
+      "source": ".",
+      "description": "Per-device journal hooks + the /journal proposal-resolution skill. Pushes session breadcrumbs to your own encrypted claude-journal data repo.",
+      "license": "MIT"
+    }
+  ]
+}

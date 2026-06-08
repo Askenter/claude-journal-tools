@@ -3,4 +3,5 @@
 # Usage: ./scripts/init-journal-device.sh <device-name>
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exec "${HERE}/venv/bin/python" -m tools.journal.init_device "$@"
+PY="${HERE}/venv/bin/python"; [ -x "$PY" ] || PY="$(command -v python3)"
+exec env PYTHONPATH="${HERE}${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m tools.journal.init_device "$@"
