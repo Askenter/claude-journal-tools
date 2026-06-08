@@ -171,8 +171,9 @@ If the breadcrumb is missing, run `pytest tests/journal/` and check
 
 ## Phase 2 consolidator via `/schedule`
 
-The nightly consolidator is a Claude Code routine created with the built-in
-`/schedule` slash command. Its prompt lives at
+The consolidator is a Claude Code routine created with the built-in
+`/schedule` slash command, run **at least nightly** (you can schedule it
+several times a day — see cadence below). Its prompt lives at
 `~/claude-journal/consolidator/ROUTINE.md` and it expects a base64-encoded
 git-crypt key in the environment variable `GIT_CRYPT_KEY_B64`. It only needs
 to be scheduled **once per account** (it runs in Anthropic's cloud, not on a
@@ -185,9 +186,10 @@ device).
 ```
 
 The skill checks whether a `journal-consolidator` routine already exists,
-picks a DST-safe run time, shows you exactly what it'll create, and only
-fires after you confirm. It passes the key via a shell `$(base64 …)`
-substitution so the secret never lands in the transcript.
+asks how many times a day to run, picks a DST-safe run time, shows you
+exactly what it'll create, and only fires after you confirm. It passes the
+key via a shell `$(base64 …)` substitution so the secret never lands in the
+transcript.
 
 <details><summary>Manual equivalent (what the skill runs under the hood)</summary>
 
@@ -207,11 +209,18 @@ macOS).
 
 </details>
 
-> **Schedule timing.** The routine treats "target date" as *yesterday in
-> UTC*. Pick a local time unambiguously past UTC midnight year-round
-> (including DST) or you get off-by-one digests. For Europe/Athens (UTC+2/+3)
-> anything ≥ 03:00 local is safe; for Pacific timezones any time after 17:00
-> PST works.
+> **Cadence.** Once a day (nightly) is the default and right for most people.
+> You can run it more often so distilled output reaches your other devices
+> sooner — runs must be **≥1h apart** (Anthropic's minimum) and stay under
+> your **per-account daily run cap** (≈15/day on the standard tier; check
+> claude.ai/code/routines). Extra runs are safe: every output is an
+> idempotent upsert, so re-running a day refreshes rather than duplicates.
+>
+> **Schedule timing.** The routine's default window is *yesterday + today in
+> UTC*, so the nightly run must fire unambiguously past UTC midnight
+> year-round (including DST) or yesterday is never fully consolidated. For
+> Europe/Athens (UTC+2/+3) anything ≥ 03:00 local is safe; for Pacific
+> timezones any time after 17:00 PST works.
 
 ```bash
 claude -p --bare "/schedule list"                         # list routines

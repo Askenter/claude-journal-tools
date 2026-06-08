@@ -259,7 +259,7 @@ The SessionStart hook returns context to Claude by writing this JSON to stdout:
 | --- | --- | --- |
 | `journal` | `/journal accept` · `/journal skip` · `/journal edit` | resolve pending proposals for the current project |
 | `journal-setup` | `/journal-setup` | interactive first-time data-repo bootstrap (tools, git identity, `gh` sign-in, then runs the bootstrap) |
-| `journal-schedule` | `/journal-schedule` | create the once-per-account nightly consolidator routine via `/schedule`, idempotently and DST-safe |
+| `journal-schedule` | `/journal-schedule` | create the once-per-account consolidator routine via `/schedule` — asks cadence (1+ runs/day), idempotent, DST-safe |
 
 > Skill names are bare (`/journal-setup`). Under the hood the plugin namespaces
 > them as `claude-journal:<name>`; the bare form works when there's no collision,
