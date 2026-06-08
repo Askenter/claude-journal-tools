@@ -155,7 +155,12 @@ def sync_project_memories(
         already = _entries_in_index(device_text)
         new_entries: list[str] = []
         for line in _journal_index_lines(_read_or_empty(journal_index)):
-            match = re.search(r"\(([^)]+)\)", line)
+            # Dedupe on the link TARGET (the `](target)` part), matching how
+            # `_entries_in_index` keys `already`. Anchoring on `](` is required:
+            # a bare `\(...\)` grabs the first parenthetical, which for a title
+            # like "... (2026-05-01)" is the date — it never matches `already`,
+            # so the entry is re-appended on every sync.
+            match = re.search(r"\]\(([^)]+)\)", line)
             if not match:
                 continue
             filename = match.group(1)
