@@ -5,17 +5,27 @@ Run once per device:
     scripts/init-journal-device.sh <device-name>
 
 What it does:
-- Clones the claude-journal repo to ~/claude-journal if missing.
+- Clones your claude-journal data repo (CLAUDE_JOURNAL_REPO_URL) if missing.
 - Records the device name to ~/.claude/journal/device-name.
-- Symlinks the project's hook entrypoints into ~/.claude/hooks/.
-- Symlinks the `journal` slash-command skill into ~/.claude/skills/journal/.
-- Registers the hooks under Stop and SessionStart in ~/.claude/settings.json
+- Attempts a git-crypt unlock of the data repo.
+
+When the hooks are installed via the Claude Code plugin, that is all the
+setup needed — the plugin registers the Stop/SessionStart hooks and the
+`journal` skill declaratively. For a manual (non-plugin) install, pass
+`--register-hooks` to additionally:
+- Symlink the project's hook entrypoints into ~/.claude/hooks/.
+- Symlink the `journal` slash-command skill into ~/.claude/skills/journal/.
+- Register the hooks under Stop and SessionStart in ~/.claude/settings.json
   (idempotent — safe to re-run).
+
+Do NOT pass `--register-hooks` if you installed the plugin, or breadcrumbs
+will be pushed twice per session.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -114,15 +124,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--repo-url",
-        default="git@github.com:askenter/claude-journal.git",
-        help="claude-journal git URL.",
+        default=os.environ.get("CLAUDE_JOURNAL_REPO_URL"),
+        help="Your private claude-journal data-repo git URL. Defaults to "
+        "the CLAUDE_JOURNAL_REPO_URL environment variable.",
     )
     parser.add_argument(
         "--journal-path",
-        default=str(Path.home() / "claude-journal"),
+        default=os.environ.get(
+            "CLAUDE_JOURNAL_PATH", str(Path.home() / "claude-journal")
+        ),
         help="Local path for the claude-journal clone.",
     )
+    parser.add_argument(
+        "--register-hooks",
+        action="store_true",
+        help="Manual (non-plugin) install: symlink hook entrypoints and the "
+        "journal skill into ~/.claude/ and register them in settings.json. "
+        "Do NOT use this if you installed the Claude Code plugin.",
+    )
     args = parser.parse_args(argv)
+
+    if not args.repo_url:
+        parser.error(
+            "no data-repo URL given. Set CLAUDE_JOURNAL_REPO_URL to your "
+            "private claude-journal clone URL, or pass --repo-url. This tool "
+            "ships no default repo (see SECURITY.md)."
+        )
 
     project_root = Path(__file__).resolve().parents[2]
     on_stop_src = project_root / "tools" / "journal" / "hooks" / "on_stop.py"
@@ -138,15 +165,24 @@ def main(argv: list[str] | None = None) -> int:
     keyfile = Path.home() / ".claude" / "journal" / "git-crypt.key"
     print(f"[init] {attempt_unlock(Path(args.journal_path), keyfile)}")
     _write_device_name(args.device)
-    _symlink(on_stop_src, on_stop_dst)
-    _symlink(on_start_src, on_start_dst)
-    if journal_skill_src.exists():
-        _symlink(journal_skill_src, journal_skill_dst)
-    register_hooks_in_settings(
-        settings_path=Path.home() / ".claude" / "settings.json",
-        on_stop_command=_hook_command(venv_python, on_stop_dst),
-        on_start_command=_hook_command(venv_python, on_start_dst),
-    )
+
+    if args.register_hooks:
+        _symlink(on_stop_src, on_stop_dst)
+        _symlink(on_start_src, on_start_dst)
+        if journal_skill_src.exists():
+            _symlink(journal_skill_src, journal_skill_dst)
+        register_hooks_in_settings(
+            settings_path=Path.home() / ".claude" / "settings.json",
+            on_stop_command=_hook_command(venv_python, on_stop_dst),
+            on_start_command=_hook_command(venv_python, on_start_dst),
+        )
+        print("[init] registered hooks + skill (manual mode).")
+    else:
+        print(
+            "[init] skipping hook registration — the Claude Code plugin "
+            "provides them. Re-run with --register-hooks for a manual install."
+        )
+
     print(f"journal device '{args.device}' initialized.")
     return 0
 
