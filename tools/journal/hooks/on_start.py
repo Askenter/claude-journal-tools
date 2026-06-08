@@ -7,6 +7,8 @@ assistant turn sees them.
 
 Always exits 0 so it never blocks the user.
 """
+from __future__ import annotations
+
 import json
 import sys
 from datetime import datetime, timezone

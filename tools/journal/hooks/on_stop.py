@@ -8,6 +8,8 @@ The transcript text is what the central routine uses to extract user/
 project/feedback memories. The structural breadcrumb on its own is enough
 for digests but not for memory distillation.
 """
+from __future__ import annotations
+
 import json
 import sys
 from datetime import datetime, timezone

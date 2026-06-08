@@ -9,6 +9,17 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.2.2] — 2026-06-08
+
+### Fixed
+- **Stop/SessionStart hooks no longer crash on older Python.** `breadcrumb.py`
+  and the two hook entrypoints were missing `from __future__ import
+  annotations`, so PEP 585 builtin-generic annotations (`list[str]`,
+  `dict[str, Any]`) were evaluated at import time and raised `TypeError: 'type'
+  object is not subscriptable` on interpreters below 3.9. The annotations are
+  now deferred, matching the rest of the package, so the hooks run under
+  whatever `python3` is on PATH.
+
 ## [0.2.1] — 2026-06-08
 
 ### Fixed
