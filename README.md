@@ -15,6 +15,20 @@ The central nightly Anthropic-cloud routine (Phase 2) does the LLM-driven
 distillation across all devices' breadcrumbs, scheduled with Claude Code's
 `/schedule` (see [Phase 2 consolidator](#phase-2-consolidator-via-schedule)).
 
+## Documentation
+
+Full docs live in [`docs/`](docs/index.md) — built to be read by both humans and
+agents, with ASCII diagrams throughout:
+
+| Doc | For |
+| --- | --- |
+| [docs/index.md](docs/index.md) | Overview, mental model, glossary — **start here** |
+| [docs/architecture.md](docs/architecture.md) | Components, the two repos, three phases, encryption boundary, repo layout |
+| [docs/data-flow.md](docs/data-flow.md) | The life of a breadcrumb: capture → consolidate → propagate, with sequence diagrams |
+| [docs/setup.md](docs/setup.md) | Install, bootstrap, add devices, schedule, verify, troubleshoot |
+| [docs/reference.md](docs/reference.md) | Env vars, CLI entrypoints, file layout, data formats, hooks, skills |
+| [docs/agents.md](docs/agents.md) | How an AI agent should use a project wired into claude-journal |
+
 ## Layout
 
 ```

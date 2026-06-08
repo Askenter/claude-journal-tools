@@ -209,10 +209,13 @@ Behavior:
    apply silently. `feedback`-type memories are NOT synced here — they are
    handled via the proposal queue in step 4.
 3. Sync `skills/global/` → `~/.claude/skills/` and
-   `skills/projects/<current-project>/` → `<project>/.claude/skills/`. Tier-2
-   skills apply silently.
+   `skills/projects/<current-project>/` → `<project>/.claude/skills/`. These
+   are *accepted* skills (already promoted into the `skills/` tree via
+   `/journal accept`), so they apply silently. New-skill *proposals* are not
+   synced here — they are surfaced in step 4.
 4. Check `proposals/` for unprocessed entries scoped to the current project.
-   Two kinds may be present:
+   Three kinds may be present:
+   - new-skill proposals (track-2)
    - CLAUDE.md / existing-skill edit proposals (track-3)
    - `feedback`-memory proposals (track-1b)
 
@@ -341,35 +344,43 @@ track-3 proposals — same `/journal accept|skip|edit` flow.
 behavioral rules. They load into every conversation and silently change how
 Claude responds. Same risk profile as CLAUDE.md, same treatment.
 
-### Track 2 — Skills (tier-2: auto-apply, log to CHANGELOG)
+### Track 2 — New skills (proposal queue, ledger + manifest)
 
-**Trigger threshold:** a technique becomes a skill only when at least
-**2 sessions on different days** referenced it. Borrowed from
+**Trigger threshold:** a technique becomes a candidate skill only when at
+least **2 sessions on different days** referenced it. Borrowed from
 `superpowers:writing-skills` ("create when you'd reference this again across
-projects"). Frequency filter prevents one-off solutions from being
-canonized.
+projects"). Frequency filter prevents one-off solutions from being canonized.
 
-**Output:** new skill written to either:
-- `claude-journal/skills/global/<name>/SKILL.md` for cross-project techniques
-- `claude-journal/skills/projects/<project>/<name>/SKILL.md` for
-  project-scoped techniques
+**Output (a proposal, not an auto-applied skill):** the routine writes the
+new skill as a `## New skill: <name>` entry inside the per-project proposal
+file `proposals/<date>-<project-key>.md` — the same file Track 1b/Track 3
+use. The entry carries `kind: new-skill`, a `scope:` (`global` or
+`project:<key>`), a `target:` path under `skills/`, a provenance line, a
+rationale, and the full `SKILL.md` wrapped in a four-backtick fence. A
+global-scope skill is filed under the project whose breadcrumbs produced it
+(most recent if several) so it surfaces when the user next opens that
+project; the `scope` tag — not the filename — decides where `accept`
+installs it.
 
-Plus a one-line entry appended to `CHANGELOG.md`:
+**Record (so the lifecycle is plainly visible):** at the same time, the
+routine appends a `~skill proposed <scope>/<name> — <provenance>` line to
+`CHANGELOG.md` and inserts a `proposed` row into `skills/INDEX.md` (a
+manifest table: Skill | Scope | Status | Description | Provenance | Updated).
 
-```
-2026-04-29 +skill global/condition-based-waiting — distilled from
-3 sessions on 2026-04-22, 2026-04-25, 2026-04-28
-```
+**Surfacing + resolution:** the SessionStart hook surfaces the entry tagged
+"new skill"; the user runs `/journal accept|skip|edit`. On accept, `/journal`
+writes the `SKILL.md` into `skills/<scope>/<name>/`, mirrors it onto the
+device, flips the CHANGELOG/INDEX records to `accepted`, and pushes — other
+devices then receive it via the existing SessionStart `sync_skills` sync. On
+skip, `/journal` records `-skill skipped` and removes the INDEX row.
 
-**Sync:** SessionStart hook copies skill files into the device's skills
-directory.
+**Why a proposal, not auto-apply:** a new skill is description-gated, but it
+still loads behavior the user never reviewed. Routing it through the same
+review gate as feedback memories and CLAUDE.md edits keeps the user in
+control; the CHANGELOG + INDEX give an at-a-glance audit trail.
 
-**Auto-apply rationale:** skills are description-gated — a new skill only
-fires when its description matches an upcoming task, so blast radius is
-bounded. The CHANGELOG provides an audit trail.
-
-**Out of scope for tier 2:** edits to *existing* skills. Those go through
-tier 3 (proposals) because they change behavior of code that already fires.
+**Out of scope for Track 2:** edits to *existing* skills. Those go through
+Track 3 (proposals) because they change behavior of code that already fires.
 
 ### Track 3 — CLAUDE.md edits + edits to existing skills (tier-3: proposal queue)
 
@@ -431,16 +442,17 @@ The system is considered correctly implemented when:
 2. The Stop hook pushes a valid breadcrumb to `raw/<device>/<date>/` after
    every session exit on any registered device.
 3. The SessionStart hook applies track-1a memories (`user`, `project`,
-   `reference`) and track-2 skills silently, surfaces track-1b
-   (`feedback`-memory) proposals and track-3 (CLAUDE.md / existing-skill)
-   proposals as inline system-reminders, and emits the morning digest line
-   when applicable.
+   `reference`) silently, surfaces track-1b (`feedback`-memory), track-2
+   (new-skill), and track-3 (CLAUDE.md / existing-skill) proposals as inline
+   system-reminders tagged by type, and emits the morning digest line when
+   applicable. Newly *accepted* skills sync silently thereafter.
 4. The central routine, when run manually with at least one day of seeded
    breadcrumbs across two devices, produces:
    - A digest per device under `digests/<date>/`
    - At least one track-1a memory if facts are present
    - At least one track-1b proposal if a behavioral rule was learned
-   - A track-2 skill only when a technique appears in 2+ days
+   - A track-2 new-skill *proposal* (plus a `~skill proposed` CHANGELOG line
+     and a `proposed` INDEX row) only when a technique appears in 2+ days
    - A track-3 proposal when CLAUDE.md drift is detected
 5. `/journal accept`, `/journal skip`, `/journal edit` work end-to-end on
    both track-1b and track-3 proposals.

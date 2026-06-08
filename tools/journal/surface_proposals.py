@@ -1,17 +1,19 @@
 """Surface pending journal proposals to Claude via SessionStart's
 `additionalContext`.
 
-The central routine writes proposals (Track 1b feedback memories,
-Track 3 CLAUDE.md edits) under `<journal>/proposals/<date>-<project>.md`.
-On SessionStart for that project, we want the next assistant turn to see
-them so the user can act via `/journal accept|skip|edit`.
+The central routine writes proposals (Track 1b feedback memories, Track 2
+new-skill suggestions, Track 3 CLAUDE.md edits) under
+`<journal>/proposals/<date>-<project>.md`. On SessionStart for that project,
+we want the next assistant turn to see them so the user can act via
+`/journal accept|skip|edit`.
 
-We build a short markdown block that lists the pending proposals for the
-current project, including their on-disk path, and return it as the
-hookSpecificOutput.additionalContext value (read by Claude Code from
-the hook's stdout).
+We build a short markdown block listing the pending proposals for the current
+project — one line per `## ` entry, each tagged with its type (new skill /
+feedback rule / CLAUDE.md edit) — and return it as the
+hookSpecificOutput.additionalContext value (read by Claude Code from the
+hook's stdout).
 
-Proposals filenames follow `<YYYY-MM-DD>-<project-key>.md`. The current
+Proposal filenames follow `<YYYY-MM-DD>-<project-key>.md`. The current
 project's key comes from the SessionStart payload's `cwd` (replace `/`
 with `-`, matching the breadcrumb extractor).
 """
@@ -39,22 +41,48 @@ def _list_proposals_for_project(proposals_dir: Path, project_key: str) -> list[P
     return matches
 
 
-def _summary_line(path: Path) -> str:
-    """Pull a one-line summary out of the proposal file. We try the first
-    `## ` heading; failing that, the first non-empty line."""
+def _read_text(path: Path) -> str:
     try:
-        text = path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8")
     except OSError:
-        return path.name
+        return ""
+
+
+def _first_nonempty(text: str) -> str:
     for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("## "):
-            return stripped[3:].strip()
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def _iter_entries(text: str) -> list[tuple[str, str]]:
+    """Split a proposal file into (heading, entry_text) pairs by `## `
+    headings. Any content before the first heading is ignored."""
+    entries: list[tuple[str, list[str]]] = []
+    current: Optional[tuple[str, list[str]]] = None
     for line in text.splitlines():
-        stripped = line.strip()
-        if stripped:
-            return stripped
-    return path.name
+        if line.startswith("## "):
+            if current is not None:
+                entries.append(current)
+            current = (line[3:].strip(), [line])
+        elif current is not None:
+            current[1].append(line)
+    if current is not None:
+        entries.append(current)
+    return [(heading, "\n".join(body)) for heading, body in entries]
+
+
+def _entry_label(heading: str, body: str) -> str:
+    """Classify one proposal entry for display."""
+    h = heading.lower()
+    b = body.lower()
+    if h.startswith("new skill") or "kind: new-skill" in b or "kind:** new-skill" in b:
+        return "new skill"
+    if "feedback" in h or "type: feedback" in b:
+        return "feedback rule"
+    if "claude.md" in h or "claude.md" in b or "target:" in b:
+        return "CLAUDE.md edit"
+    return "proposal"
 
 
 def build_proposal_context(*, journal_repo: Path, cwd: str) -> Optional[str]:
@@ -69,12 +97,20 @@ def build_proposal_context(*, journal_repo: Path, cwd: str) -> Optional[str]:
         "",
     ]
     for path in proposals:
-        summary = _summary_line(path)
-        lines.append(f"- `{path}` — {summary}")
+        text = _read_text(path)
+        entries = _iter_entries(text)
+        if not entries:
+            summary = _first_nonempty(text) or path.name
+            lines.append(f"- [proposal] {summary} (`{path}`)")
+            continue
+        for heading, body in entries:
+            label = _entry_label(heading, body)
+            lines.append(f"- [{label}] {heading} (`{path}`)")
     lines.extend([
         "",
-        "These are behavioral rules or CLAUDE.md edits the consolidator "
-        "extracted from recent sessions. They are NOT auto-applied.",
+        "These are new skills, behavioral rules, or CLAUDE.md edits the "
+        "consolidator extracted from recent sessions. They are NOT "
+        "auto-applied.",
         "",
         "Run `/journal accept`, `/journal skip`, or `/journal edit` to "
         "review and act on them.",
