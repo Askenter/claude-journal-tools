@@ -9,6 +9,35 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.5.0] — 2026-06-08
+
+### Security
+- **Broadened secret redaction and consolidated it into one shared module**
+  (`tools/journal/redaction.py`, now imported by both `transcript.py` and
+  `state.py` — the patterns were previously duplicated, and `state.py` was
+  missing the git-crypt-key pattern). On top of the existing Anthropic/OpenAI
+  `sk-`, GitHub PAT, AWS access-key-id, GCP, Slack-token, signed-JWT,
+  PEM-private-key, and git-crypt patterns, it now also scrubs: Stripe
+  `sk_/rk_`, the full GitHub token family (`gho_/ghu_/ghs_/ghr_`), Google
+  `GOCSPX-` OAuth secrets, label-anchored AWS **secret** access keys, Slack
+  webhook URLs, `Authorization: Bearer` tokens, database connection URIs with
+  embedded credentials, and unsigned/two-segment JWTs.
+- Documented the layered secret-handling model (tool I/O dropped → pattern
+  redaction → git-crypt encryption at rest) in `SECURITY.md`, `README.md`, and
+  the docs, framed honestly as defense-in-depth, not a guarantee.
+
+### Fixed
+- **ReDoS in the PEM private-key pattern.** The old `.*?` under `re.DOTALL` was
+  O(n²) on input with many `BEGIN` markers and no `END` (~7.4 s on 256 KB) — and
+  `redact()` runs on every push hook, so a malformed or repeated key paste could
+  stall SessionStart/Stop for seconds. Rewritten with a negated-marker lazy
+  class (~milliseconds now); it also now scrubs a key pasted without its `END`
+  line. Covered by a timing regression test.
+- **`sk-` false positives.** The old rule clobbered ordinary kebab-case
+  identifiers (`sk-learn-classification-pipeline`, CSS custom properties, k8s
+  label values). It now requires a 20-character unbroken alphanumeric run, so
+  real keys still match but slugs are left intact.
+
 ## [0.4.0] — 2026-06-08
 
 ### Changed

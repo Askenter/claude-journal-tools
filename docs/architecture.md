@@ -83,7 +83,8 @@ Triggered by Claude Code's **`Stop`** event at session end. The
    invoked (from `Skill`), the first user prompt (truncated), and start/end
    timestamps.
 3. Extracts a **trimmed transcript** (`transcript.py`) — user + assistant prose
-   only, tail-truncated to ~30 KB, with light secret redaction.
+   only, tail-truncated to ~30 KB, with best-effort secret redaction
+   (see [SECURITY.md](../SECURITY.md#secret-handling-in-pushed-text)).
 4. Snapshots the project's `CLAUDE.md` into `state/` (so the consolidator can
    diff against it for CLAUDE.md-edit proposals).
 5. Pushes all of it under `raw/<device>/<date>/` (`push.py`). If the push

@@ -9,6 +9,14 @@ resolving consolidation proposals.
 > of your sessions (including transcripts) to a git repo on every session
 > exit. Your data repo **must be private and git-crypt-encrypted**. This
 > tools repo ships no data repo and no key — you supply your own.
+>
+> Secrets are kept out of the journal by three layers: tool input/output is
+> dropped entirely (only prose is kept), the remaining prose is scrubbed for
+> known key shapes (API keys, tokens, PEM private keys, DB URIs, JWTs, the
+> git-crypt key, …), and everything is git-crypt-encrypted at rest. This is
+> defense-in-depth, **not** a guarantee — the encryption is the real boundary;
+> redaction is best-effort over known patterns. See
+> [SECURITY.md → Secret handling](SECURITY.md#secret-handling-in-pushed-text).
 
 Phase 1 (this repo's scope): structural breadcrumbs only — no in-hook LLM.
 The central nightly Anthropic-cloud routine (Phase 2) does the LLM-driven

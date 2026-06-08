@@ -52,7 +52,7 @@ Runs when a session ends. Always exits 0; failures degrade to a local buffer.
  │        started_at / ended_at  (first/last timestamps)        │
  │ 3. extract_transcript_text(transcript)                       │
  │        user+assistant prose only, tail-truncated to ~30 KB,  │
- │        secrets redacted (sk-… ghp_… github_pat_… key b64)    │
+ │        secrets redacted (keys, tokens, PEM, DB URIs, JWTs…)  │
  │ 4. snapshot <cwd>/CLAUDE.md → state/<project-key>/CLAUDE.md  │
  │    (best-effort; redacted)                                   │
  └─────────────────────────────────────────────────────────────┘

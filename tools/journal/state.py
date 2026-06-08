@@ -11,24 +11,10 @@ a redundant proposal.
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Optional
 
-
-# Same light-touch redactions used for transcripts — defense-in-depth so
-# CLAUDE.md secrets don't accidentally land in the journal repo.
-_REDACTION_PATTERNS = [
-    re.compile(r"sk-[A-Za-z0-9_-]{20,}"),       # Anthropic / OpenAI / OAuth
-    re.compile(r"ghp_[A-Za-z0-9]{20,}"),        # GitHub PAT classic
-    re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),  # GitHub PAT fine-grained
-]
-
-
-def _redact(text: str) -> str:
-    for pat in _REDACTION_PATTERNS:
-        text = pat.sub("[REDACTED]", text)
-    return text
+from tools.journal.redaction import redact as _redact
 
 
 def _safe_project_segment(project_key: str) -> str:

@@ -13,33 +13,14 @@ budget (default 30 KB) so older content is dropped first when over.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
+
+from tools.journal.redaction import redact as _redact
 
 # Default size budget for the transcript file pushed alongside a breadcrumb.
 # 30 KB ≈ ~7,500 words of conversational text — enough for memory/skill
 # extraction without bloating the journal repo.
 DEFAULT_BUDGET_BYTES = 30_000
-
-# Light-touch redactions for things that should never end up in the journal
-# even on a private repo: API keys and OAuth tokens. Not a security boundary,
-# just a defense-in-depth habit.
-_REDACTION_PATTERNS = [
-    re.compile(r"sk-[A-Za-z0-9_-]{20,}"),       # Anthropic / OpenAI / OAuth
-    re.compile(r"ghp_[A-Za-z0-9]{20,}"),        # GitHub PAT classic
-    re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),  # GitHub PAT fine-grained
-    # git-crypt symmetric keyfile, base64-encoded. Every git-crypt key
-    # starts with the bytes b"\x00GITCRYPT" — base64 of those 9 bytes is
-    # always the prefix "AEdJVENSWVBU". Catching that prefix scrubs the
-    # key from transcripts even if it appears mid-paragraph.
-    re.compile(r"AEdJVENSWVBU[A-Za-z0-9+/=]{50,}"),
-]
-
-
-def _redact(text: str) -> str:
-    for pat in _REDACTION_PATTERNS:
-        text = pat.sub("[REDACTED]", text)
-    return text
 
 
 def _stringify_content(content: object) -> str:

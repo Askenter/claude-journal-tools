@@ -16,6 +16,34 @@ then `git commit && git push`. The transcript can contain anything that was
 in your session — prompts, file contents, command output. **Treat the data
 repo as containing your raw working material.**
 
+## Secret handling in pushed text
+
+Secrets are kept out of the journal by **three layers**, strongest first:
+
+1. **Tool input/output is dropped entirely.** The transcript keeps only
+   user/assistant *prose* — every `tool_use` and `tool_result` block (command
+   output, file reads, env dumps, where secrets most often appear) is discarded
+   before anything is written (`transcript.py`).
+2. **Pattern redaction over the remaining prose.** A shared scrubber
+   (`tools/journal/redaction.py`) replaces known key shapes with `[REDACTED]`
+   in both transcripts and the captured `CLAUDE.md` snapshots: Anthropic/OpenAI
+   `sk-…`, Stripe `sk_/rk_…`, the GitHub token family (`ghp_/gho_/ghu_/ghs_/ghr_`
+   and `github_pat_`), Google `AIza…` and `GOCSPX-…`, AWS access-key ids and
+   labelled secret keys, Slack tokens and webhook URLs, `Authorization: Bearer`
+   tokens, database URIs with embedded credentials, JWTs, PEM private-key
+   blocks, and the base64 git-crypt key prefix.
+3. **Encryption at rest.** Everything under `raw/` and `state/` is
+   git-crypt-encrypted in the repo (see "Encryption" below), so even content
+   that slips past layers 1–2 is ciphertext on your git host.
+
+**This is defense-in-depth, not a guarantee.** Layer 2 is pattern-based: it
+matches *known* secret formats and will miss novel or unusual ones, and the
+breadcrumb's `first_prompt` field is truncated but not pattern-scrubbed. The
+load-bearing protection is layer 3 — keep the data repo **private and
+git-crypt-encrypted** and the git-crypt key off the repo. Don't rely on
+redaction alone, and don't paste a credential you couldn't tolerate sitting
+encrypted in your own repo.
+
 ### Requirements you are responsible for
 
 1. **The data repo MUST be private.** Never point these tools at a public

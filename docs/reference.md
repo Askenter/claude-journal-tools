@@ -127,8 +127,14 @@ python3 tools/journal/init_device.py <device-name> --register-hooks   # manual (
 ### Transcript — `raw/<device>/<date>/<session_id>.transcript.md`
 
 Markdown, **user + assistant prose only** (tool calls/results dropped),
-tail-truncated to **~30 KB** (older content dropped first). Redactions applied:
-`sk-…`, `ghp_…`, `github_pat_…`, and the base64 git-crypt key prefix
+tail-truncated to **~30 KB** (older content dropped first). Best-effort secret
+redaction runs over the prose — defense-in-depth behind git-crypt, **not** a
+guarantee (see [SECURITY.md](../SECURITY.md#secret-handling-in-pushed-text)).
+Patterns scrubbed: Anthropic/OpenAI `sk-…`, Stripe `sk_/rk_…`, the GitHub token
+family (`ghp_/gho_/ghu_/ghs_/ghr_…`, `github_pat_…`), Google `AIza…` and
+`GOCSPX-…`, AWS access-key ids and labelled secret keys, Slack `xox…` tokens and
+webhook URLs, `Authorization: Bearer …`, database URIs with embedded
+credentials, JWTs, PEM private-key blocks, and the base64 git-crypt key prefix
 (`AEdJVENSWVBU…`). Format:
 
 ```markdown
