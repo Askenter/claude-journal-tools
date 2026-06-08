@@ -1,6 +1,6 @@
 ---
 name: journal-setup
-description: Use when the user runs `/claude-journal:journal-setup` (or asks to "bootstrap / set up the claude-journal data repo for the first time"). Interactive front door for first-time data-repo creation — checks tools, configures git identity, signs into gh when a remote is wanted, then drives the bootstrap and points to next steps. Run this once, before adding any device.
+description: Use when the user runs `/journal-setup` (or asks to "bootstrap / set up the claude-journal data repo for the first time"). Interactive front door for first-time data-repo creation — checks tools, configures git identity, signs into gh when a remote is wanted, then drives the bootstrap and points to next steps. Run this once, before adding any device.
 ---
 
 You are doing the **one-time, first-machine setup** of a brand-new
@@ -30,7 +30,7 @@ Before anything, look for an existing setup and stop if found:
    repo is already bootstrapped. Tell the user, show its remote
    (`git -C <path> remote -v`), and stop — point them at
    `tools/journal/init_device.py` (to add *this* device) or
-   `/claude-journal:journal-schedule` (to create the nightly routine) instead.
+   `/journal-schedule` (to create the nightly routine) instead.
 2. If `~/.claude/journal/git-crypt.key` already exists but the data repo does
    not, this is probably an *additional* device, not a first bootstrap — the
    key was placed out-of-band. Do **not** run bootstrap (it would refuse
@@ -142,7 +142,7 @@ Once verified, tell the user the two remaining steps (do not run them here):
    `tools/journal/init_device.py <device-name>`. Additional devices need the
    git-crypt key placed first, out-of-band (see README).
 2. **Create the nightly routine, once per account**, with
-   `/claude-journal:journal-schedule`.
+   `/journal-schedule`.
 
 ## Guardrails
 

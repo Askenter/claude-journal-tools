@@ -58,8 +58,8 @@ Install git-crypt:
 ```
 
 That registers the `Stop` and `SessionStart` hooks and the
-`/claude-journal:journal`, `/claude-journal:journal-setup`, and
-`/claude-journal:journal-schedule` skills. The hooks won't do anything useful
+`/journal`, `/journal-setup`, and
+`/journal-schedule` skills. The hooks won't do anything useful
 until you create a data repo and name the device — the two one-time steps below.
 
 ## Create your data repo (once, ever — first device only)
@@ -69,7 +69,7 @@ creates the private GitHub repo, lays out the encrypted directory skeleton,
 initializes git-crypt, **generates your key**, and seeds a generic
 `consolidator/ROUTINE.md`.
 
-**Easiest path:** run `/claude-journal:journal-setup`. It checks your tools,
+**Easiest path:** run `/journal-setup`. It checks your tools,
 sets your git identity, signs you into `gh` if a remote is wanted, then walks
 you through the bootstrap below (the key stays in your terminal, never the
 transcript). Prefer the manual route? It's exactly what the skill runs:
@@ -89,7 +89,7 @@ ever join. (For automation, back it up out-of-band and pass `--key-backed-up`.)
 Already have a data repo? Skip this section.
 
 > Bootstrap only seeds the `ROUTINE.md` prompt; it does not create the cloud
-> routine. After your devices are set up, run `/claude-journal:journal-schedule`
+> routine. After your devices are set up, run `/journal-schedule`
 > once to create it — see [Phase 2 consolidator](#phase-2-consolidator-via-schedule).
 
 ## One-time per-device setup
@@ -167,7 +167,7 @@ device).
 **Recommended — let Claude create it** (idempotent, UTC-safe, confirms first):
 
 ```text
-/claude-journal:journal-schedule
+/journal-schedule
 ```
 
 The skill checks whether a `journal-consolidator` routine already exists,
@@ -214,7 +214,7 @@ After a successful run the data repo gains:
 - `skills/*` — distilled reusable skills
 - `proposals/<YYYY-MM-DD>-<project-key>.md` — pending feedback / CLAUDE.md
   proposals, surfaced at SessionStart and resolved via
-  `/claude-journal:journal accept|skip|edit` (see `skills/journal/SKILL.md`).
+  `/journal accept|skip|edit` (see `skills/journal/SKILL.md`).
 
 ---
 
