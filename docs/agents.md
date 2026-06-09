@@ -102,6 +102,10 @@ The journal is **personal and private — it does not leave the machine.**
         → check ~/claude-journal/memories/<project-key>/  (and digests/)
           not raw/. If absent, ask the user.
 
+   Asked "what did I do <when>" / "what do I know about <topic>"?
+        → /journal recall  (it reads digests/ + memories/ for you — don't
+          reconstruct the answer from raw/ or git).
+
    See a "pending proposals" reminder?
         → tell the user; act only when they run /journal accept|skip|edit.
 

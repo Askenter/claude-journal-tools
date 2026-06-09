@@ -185,6 +185,33 @@ the nightly routine.
 Because every output is the same idempotent upsert as the nightly routine,
 running both for the same day refreshes rather than duplicates.
 
+### ③′ Recall — `/journal recall`
+
+The read side of the loop. Instead of reconstructing past work from raw
+transcripts or git, ask the journal directly.
+
+```
+ you run /journal recall <question>
+        │
+        ▼
+ ┌──────────────────────────────────────────────────────────────────┐
+ │ classify: time question  → recall.py dates <YYYY-MM-DD>...        │
+ │           topic question → recall.py memories [project]           │
+ │ recall.py (tools/journal): pull, assert unlocked, then inventory  │
+ │   dates    → which digests/<date>/<device>.md exist; gaps (raw    │
+ │              but no digest); empty days                            │
+ │   memories → MEMORY.md index + memory files per project           │
+ │ Claude reads the located digests/ + memories/ and synthesizes     │
+ │   the answer (never reads raw/)                                   │
+ └──────────────────────────────────────────────────────────────────┘
+        │
+        ├─ gap day (raw, no digest) → offer /journal consolidate <date>; wait
+        └─ empty day → say no activity was captured
+```
+
+Distilled outputs only, per the golden rule. A day that was never consolidated
+is filled by offering `/journal consolidate`, not by reading `raw/`.
+
 ---
 
 ## ③ Propagate — the SessionStart hook (`on_start.py`)

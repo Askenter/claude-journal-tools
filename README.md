@@ -46,7 +46,7 @@ claude-journal-tools/
 │   └── marketplace.json   marketplace entry for /plugin install
 ├── hooks/hooks.json       declarative Stop + SessionStart hook wiring
 ├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
-├── tests/journal/         pytest suite (stdlib only, 180 tests across 18 files)
+├── tests/journal/         pytest suite (stdlib only, 196 tests across 19 files)
 ├── scripts/               bootstrap-journal-repo.sh + init-journal-device.sh (data-repo setup)
 ├── skills/                the /journal slash-command skill (see below)
 └── docs/                  design specs, phase plans, architecture + reference guides
@@ -58,6 +58,7 @@ Skills shipped under `skills/`:
   - `/journal setup` — guided first-time bootstrap of your data repo
   - `/journal schedule` — create/update the nightly Phase 2 consolidator routine via `/schedule`
   - `/journal consolidate [date]` — run Phase 2 distillation now, locally, including the current session, instead of waiting for the nightly routine
+  - `/journal recall <question>` — answer from the journal (e.g. "what did I do yesterday" from digests, "what do I know about X" from memories)
   - `/journal accept|skip|edit` — resolve pending consolidation proposals
 
 Runtime is **Python 3.11+, standard library only** — no `pip install`, no
@@ -88,7 +89,7 @@ Install git-crypt:
 ```
 
 That registers the `Stop` and `SessionStart` hooks and the single `/journal`
-command (`setup`, `schedule`, `consolidate`, `accept`/`skip`/`edit`). The hooks won't do
+command (`setup`, `schedule`, `consolidate`, `recall`, `accept`/`skip`/`edit`). The hooks won't do
 anything useful until you create a data repo and name the device — the two
 one-time steps below.
 

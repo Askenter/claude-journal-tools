@@ -9,6 +9,24 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.7.0] — 2026-06-09
+
+### Added
+- **`/journal recall <question>` — read the journal back.** The pipeline could
+  capture, consolidate, and propagate, but nothing actively *used* the distilled
+  output to answer a question, so "what did I do yesterday" got reconstructed
+  from raw sessions and git instead of from the journal's own `digests/`. The new
+  action answers from the journal: time questions ("what did I do yesterday")
+  resolve to `digests/<date>/<device>.md` across devices, topic questions ("what
+  do I know about project X") to `memories/<project>/*.md`. A tested helper
+  (`tools/journal/recall.py`) does the mechanical inventory (pull, unlock check,
+  which device digests exist for a set of dates, gap detection, memory listing);
+  the asking session's Claude resolves the time phrase and synthesizes the
+  answer. It reads distilled outputs **only**, never `raw/` (the golden rule);
+  for any requested day that isn't distilled yet it offers `/journal consolidate`
+  rather than reconstructing from raw. See
+  `docs/superpowers/specs/2026-06-09-journal-recall-design.md`.
+
 ## [0.6.1] — 2026-06-09
 
 ### Added

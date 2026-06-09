@@ -92,6 +92,7 @@ python3 tools/journal/init_device.py <device-name> --register-hooks   # manual (
 | `pull.py` | best-effort `git pull --rebase --autostash` |
 | `consolidate.py` | on-demand `/journal consolidate` orchestrator: flush the live session, compute un-consolidated dates, commit/push the distilled output |
 | `flushed.py` | device-local ledger of sessions already flushed by consolidate, so the later Stop hook skips re-writing them |
+| `recall.py` | `/journal recall` inventory: which `digests/` exist for a set of dates (+ gap detection) and which `memories/` exist per project; reads distilled outputs only, never `raw/` |
 | `state.py` | snapshot a project's `CLAUDE.md` into `state/` (redacted) |
 | `encryption.py` | detect whether a repo is git-crypt-locked (magic-byte sniff) |
 | `sync_memories.py` | mirror `memories/` → device auto-memory tree |
@@ -275,6 +276,7 @@ has its own flow under `skills/journal/references/`.
 | `setup` | `/journal setup` | interactive first-time data-repo bootstrap (tools, git identity, `gh` sign-in, the cloud routine's GitHub token, then runs the bootstrap) |
 | `schedule` | `/journal schedule` | create/update the once-per-account consolidator routine via `/schedule` — asks cadence (1+ runs/day), idempotent, DST-safe |
 | `consolidate` | `/journal consolidate [date]` | run the same distillation **now**, locally, against the auto-detected un-consolidated dates (or one explicit `YYYY-MM-DD`); flushes the current session first so it's included, then commits + pushes |
+| `recall` | `/journal recall <question>` | answer from the journal: time questions (`what did I do yesterday`) from `digests/`, topic questions (`what do I know about X`) from `memories/`; reads distilled outputs only, offers `/journal consolidate` for any day not yet distilled |
 | `accept` · `skip` · `edit` | `/journal accept` · `/journal skip` · `/journal edit` | resolve pending proposals for the current project |
 
 > The command is bare `/journal`. Under the hood the plugin namespaces it as

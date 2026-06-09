@@ -40,8 +40,9 @@ Install `git-crypt`:
 ```
 
 This registers the `Stop` and `SessionStart` hooks and the single `/journal`
-command (`setup`, `schedule`, `consolidate`, `accept`/`skip`/`edit`). The hooks
-do nothing useful until you create a data repo and name the device (steps 2–3).
+command (`setup`, `schedule`, `consolidate`, `recall`, `accept`/`skip`/`edit`).
+The hooks do nothing useful until you create a data repo and name the device
+(steps 2–3).
 
 ## Step 2 — Bootstrap the data repo (first device only)
 

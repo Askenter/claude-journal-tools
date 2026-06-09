@@ -52,6 +52,12 @@ same distillation **now**, on your machine, against the breadcrumbs not yet
 consolidated — and it flushes the current session first, so the work you just
 did is included.
 
+To *use* what the journal has distilled, `/journal recall <question>` answers
+from it directly — time questions ("what did I do yesterday") from the
+`digests/`, topic questions ("what do I know about project X") from the
+`memories/`. It reads distilled outputs only, never raw transcripts, and offers
+`/journal consolidate` for any day not yet distilled.
+
 ## Documentation map
 
 | Doc | Read it for |

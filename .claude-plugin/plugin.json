@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "claude-journal",
-  "description": "Per-device Stop/SessionStart hooks that push session breadcrumbs to your own encrypted claude-journal data repo, plus a single /journal command: `setup` bootstraps the data repo, `schedule` creates the nightly consolidator routine, `consolidate` distills recent breadcrumbs on demand (including the current session), and `accept`/`skip`/`edit` resolve consolidation proposals.",
-  "version": "0.6.1",
+  "description": "Per-device Stop/SessionStart hooks that push session breadcrumbs to your own encrypted claude-journal data repo, plus a single /journal command: `setup` bootstraps the data repo, `schedule` creates the nightly consolidator routine, `consolidate` distills recent breadcrumbs on demand (including the current session), `recall` answers questions from the journal's digests/memories, and `accept`/`skip`/`edit` resolve consolidation proposals.",
+  "version": "0.7.0",
   "author": {
     "name": "Anthony Skenter"
   },

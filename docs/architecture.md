@@ -160,6 +160,20 @@ Triggered by Claude Code's **`SessionStart`** event. The
 
 Like Phase 1, this runs **no LLM** — it is file sync + a context nudge.
 
+### Using the journal (`/journal recall`)
+
+Propagation makes the current project's memories ambient at SessionStart, but
+answering a direct question — "what did I do yesterday", "what do I know about
+project X" — is the job of `/journal recall`. It reads the distilled outputs and
+**only** those: time questions resolve to `digests/<date>/<device>.md` across
+devices, topic questions to `memories/<project>/*.md`. The mechanical inventory
+(which digests exist, gap detection, memory listing) is `tools/journal/recall.py`;
+the synthesis is the asking session's Claude. Per the
+[golden rule](agents.md), it never reads `raw/` — when a requested day isn't
+distilled yet it offers `/journal consolidate` rather than reconstructing from
+raw transcripts. See the
+[journal-recall spec](superpowers/specs/2026-06-09-journal-recall-design.md).
+
 ## Why facts auto-apply but behavior changes don't
 
 The pipeline draws a hard line by *blast radius*:
