@@ -9,6 +9,37 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.6.0] — 2026-06-09
+
+### Added
+- **On-demand consolidation: `/journal consolidate [date]`.** Runs the same
+  Phase 2 distillation as the nightly routine, but now, locally, against the
+  already-unlocked clone — so you don't have to wait for the cloud run. It
+  reuses the data repo's own `consolidator/ROUTINE.md` for Tracks 0–3 (no forked
+  rules) and the existing `capture.py`/`push.py`/`pull.py`/`encryption.py`
+  helpers; the only deltas from the cloud run are skipping the unlock step (the
+  local repo is already unlocked) and pushing with the device's normal
+  `git push`. Dates are auto-detected: today and yesterday (UTC) are always
+  refreshed, plus any date in a 14-day lookback whose digests are missing. An
+  explicit `YYYY-MM-DD` overrides the auto set. See
+  `docs/superpowers/specs/2026-06-09-on-demand-consolidation-design.md`.
+- **The current session is included.** Before distilling, consolidate flushes
+  the live session into `raw/` using the same capture path the Stop hook uses
+  (located via `CLAUDE_CODE_SESSION_ID`), so the work you just did is distilled
+  in the same run rather than being missed until its Stop hook fires.
+
+### Changed
+- **Capture is now single-sourced in `tools/journal/capture.py`.** The Stop
+  hook's breadcrumb/transcript/state build-and-push body moved into a shared
+  `capture_session()` so the Stop hook and on-demand consolidation use exactly
+  the same code (`on_stop.py` is now a thin wrapper).
+
+### Fixed
+- **The Stop hook no longer re-writes a session already flushed on demand.**
+  `/journal consolidate` records the flushed session id in a device-local ledger
+  (`~/.claude/journal/flushed-sessions`); the Stop hook checks it and exits
+  without writing, so a session is never captured twice.
+
 ## [0.5.0] — 2026-06-08
 
 ### Security

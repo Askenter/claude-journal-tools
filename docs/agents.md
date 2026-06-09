@@ -7,8 +7,8 @@ a human, read it too — it explains what Claude sees and why.
 ## What this means for you
 
 A background pipeline captures a breadcrumb from each Claude Code session,
-distills them nightly, and feeds the results back. You benefit from it and you
-participate in it. Concretely:
+distills them nightly (or on demand via `/journal consolidate`), and feeds the
+results back. You benefit from it and you participate in it. Concretely:
 
 - **Distilled facts appear automatically.** At SessionStart, the hook mirrors
   the consolidator's distilled *memories* onto this device — per-project facts
@@ -107,6 +107,7 @@ The journal is **personal and private — it does not leave the machine.**
 
    Asked to set up the pipeline?  → /journal setup
    Asked to schedule the nightly routine?  → /journal schedule
+   Asked to consolidate now / not wait for the nightly run?  → /journal consolidate
 
    Tempted to grep ~/claude-journal/raw/ ?
         → stop. That's the consolidator's input, not your source.

@@ -17,6 +17,12 @@ def device_name_path() -> Path:
     return Path.home() / ".claude" / "journal" / "device-name"
 
 
+def flushed_sessions_path() -> Path:
+    """Session ids already captured on-demand by `/journal consolidate`, so
+    the later Stop hook skips re-writing them. Device-local, one id per line."""
+    return Path.home() / ".claude" / "journal" / "flushed-sessions"
+
+
 def read_device_name() -> str:
     p = device_name_path()
     if not p.exists():

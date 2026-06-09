@@ -83,12 +83,15 @@ python3 tools/journal/init_device.py <device-name> --register-hooks   # manual (
 
 | Module | Responsibility |
 | --- | --- |
-| `paths.py` | resolve repo/buffer/device-name paths from env |
+| `paths.py` | resolve repo/buffer/device-name/flushed-sessions paths from env |
 | `breadcrumb.py` | the `Breadcrumb` dataclass + serialization (truncates `first_prompt` to 200) |
 | `extract.py` | parse a session transcript into structural breadcrumb fields |
 | `transcript.py` | extract trimmed, redacted, tail-truncated transcript markdown |
+| `capture.py` | shared `capture_session()` — build breadcrumb + transcript + state snapshot, then push (used by the Stop hook and on-demand consolidate) |
 | `push.py` | write breadcrumb files, commit/pull/push, offline buffer + drain |
 | `pull.py` | best-effort `git pull --rebase --autostash` |
+| `consolidate.py` | on-demand `/journal consolidate` orchestrator: flush the live session, compute un-consolidated dates, commit/push the distilled output |
+| `flushed.py` | device-local ledger of sessions already flushed by consolidate, so the later Stop hook skips re-writing them |
 | `state.py` | snapshot a project's `CLAUDE.md` into `state/` (redacted) |
 | `encryption.py` | detect whether a repo is git-crypt-locked (magic-byte sniff) |
 | `sync_memories.py` | mirror `memories/` → device auto-memory tree |
@@ -270,6 +273,7 @@ has its own flow under `skills/journal/references/`.
 | --- | --- | --- |
 | `setup` | `/journal setup` | interactive first-time data-repo bootstrap (tools, git identity, `gh` sign-in, the cloud routine's GitHub token, then runs the bootstrap) |
 | `schedule` | `/journal schedule` | create/update the once-per-account consolidator routine via `/schedule` — asks cadence (1+ runs/day), idempotent, DST-safe |
+| `consolidate` | `/journal consolidate [date]` | run the same distillation **now**, locally, against the auto-detected un-consolidated dates (or one explicit `YYYY-MM-DD`); flushes the current session first so it's included, then commits + pushes |
 | `accept` · `skip` · `edit` | `/journal accept` · `/journal skip` · `/journal edit` | resolve pending proposals for the current project |
 
 > The command is bare `/journal`. Under the hood the plugin namespaces it as

@@ -47,6 +47,11 @@ you can `/journal accept|skip|edit` them. Distilled facts flow automatically;
 new skills, feedback rules, and CLAUDE.md edits — anything that changes how
 Claude *behaves* — wait for your explicit `/journal accept`.
 
+If you don't want to wait for the nightly run, `/journal consolidate` runs the
+same distillation **now**, on your machine, against the breadcrumbs not yet
+consolidated — and it flushes the current session first, so the work you just
+did is included.
+
 ## Documentation map
 
 | Doc | Read it for |
@@ -87,7 +92,8 @@ Claude *behaves* — wait for your explicit `/journal accept`.
 - **Tools repo** — this repo, `claude-journal-tools`. The installable plugin +
   scripts. Contains no personal data.
 - **Consolidator** — the once-per-account nightly Claude Code routine (created
-  via `/schedule`) that turns raw breadcrumbs into distilled artifacts.
+  via `/schedule`) that turns raw breadcrumbs into distilled artifacts. The same
+  distillation can also be run on demand on a device with `/journal consolidate`.
 - **Project key** — an absolute project path slugified by replacing `/` with
   `-` (e.g. `/home/you/myproject` → `-home-you-myproject`). Used to bucket memories and
   proposals per project.

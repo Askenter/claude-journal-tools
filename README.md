@@ -46,7 +46,7 @@ claude-journal-tools/
 │   └── marketplace.json   marketplace entry for /plugin install
 ├── hooks/hooks.json       declarative Stop + SessionStart hook wiring
 ├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
-├── tests/journal/         pytest suite (stdlib only, 106 tests across 13 files)
+├── tests/journal/         pytest suite (stdlib only, 168 tests across 17 files)
 ├── scripts/               bootstrap-journal-repo.sh + init-journal-device.sh (data-repo setup)
 ├── skills/                the /journal slash-command skill (see below)
 └── docs/                  design specs, phase plans, architecture + reference guides
@@ -54,9 +54,10 @@ claude-journal-tools/
 
 Skills shipped under `skills/`:
 
-- `journal/` — one command, three actions (the flows live in `journal/references/`):
+- `journal/` — one command, several actions (the flows live in `journal/references/`):
   - `/journal setup` — guided first-time bootstrap of your data repo
   - `/journal schedule` — create/update the nightly Phase 2 consolidator routine via `/schedule`
+  - `/journal consolidate [date]` — run Phase 2 distillation now, locally, including the current session, instead of waiting for the nightly routine
   - `/journal accept|skip|edit` — resolve pending consolidation proposals
 
 Runtime is **Python 3.11+, standard library only** — no `pip install`, no
@@ -87,7 +88,7 @@ Install git-crypt:
 ```
 
 That registers the `Stop` and `SessionStart` hooks and the single `/journal`
-command (`setup`, `schedule`, `accept`/`skip`/`edit`). The hooks won't do
+command (`setup`, `schedule`, `consolidate`, `accept`/`skip`/`edit`). The hooks won't do
 anything useful until you create a data repo and name the device — the two
 one-time steps below.
 
@@ -263,6 +264,27 @@ After a successful run the data repo gains:
 - `proposals/<YYYY-MM-DD>-<project-key>.md` — pending feedback / CLAUDE.md
   proposals, surfaced at SessionStart and resolved via
   `/journal accept|skip|edit` (see `skills/journal/SKILL.md`).
+
+### On-demand consolidation (`/journal consolidate`)
+
+Don't want to wait for the nightly routine? Run it now, on the device:
+
+```text
+/journal consolidate            # auto-detect the un-consolidated dates
+/journal consolidate 2026-06-09 # or force a single date
+```
+
+It runs the **same** distillation (Tracks 0–3 from your data repo's
+`consolidator/ROUTINE.md`), locally, against the already-unlocked clone — so the
+output is identical to the nightly run, just sooner. Before distilling, it
+**flushes the current session** into `raw/` (using the same capture path the
+`Stop` hook uses), so the work you just finished is included rather than missed
+until that session's `Stop` fires. The flushed session is recorded in
+`~/.claude/journal/flushed-sessions` so its later `Stop` hook does **not** write
+it twice. The date window is today and yesterday (UTC) plus any date in a 14-day
+lookback whose digests are missing, and every write is an idempotent upsert, so
+running it on demand and nightly for the same day refreshes rather than
+duplicates. It complements the routine rather than replacing it.
 
 ---
 

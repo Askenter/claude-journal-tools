@@ -154,6 +154,37 @@ feedback rules, CLAUDE.md/skill edits) is the heart of the safety model — see
 [architecture.md](architecture.md#why-facts-auto-apply-but-behavior-changes-dont).
 `raw/` is treated as immutable input; a failed run loses nothing.
 
+### ②′ Consolidate on demand — `/journal consolidate`
+
+The same distillation can also be run **locally, now**, instead of waiting for
+the nightly routine.
+
+```
+ you run /journal consolidate (optionally a YYYY-MM-DD)
+        │
+        ▼
+ ┌──────────────────────────────────────────────────────────────────┐
+ │ plan  (tools/journal/consolidate.py)                              │
+ │   1. FLUSH the live session → raw/<device>/<today>/<sid>.json     │
+ │      (same capture.py the Stop hook uses) + mark it flushed       │
+ │   2. git pull --rebase --autostash                                │
+ │   3. assert repo unlocked (else abort — no distilling ciphertext) │
+ │   4. dates = today+yesterday ∪ (14-day lookback, missing digests) │
+ │ distill  (this session's Claude follows consolidator/ROUTINE.md,  │
+ │          Tracks 0–3, skipping §0 unlock; no push here)            │
+ │ finalize → git add digests/ memories/ proposals/ skills/ …        │
+ │          → skip-if-empty, else commit + push                      │
+ └──────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+   later, when this session ends, its Stop hook sees the flushed marker
+   and does NOT re-write the session — no duplicate (the flush is a
+   mid-session snapshot; subsequent work is picked up by the next run).
+```
+
+Because every output is the same idempotent upsert as the nightly routine,
+running both for the same day refreshes rather than duplicates.
+
 ---
 
 ## ③ Propagate — the SessionStart hook (`on_start.py`)

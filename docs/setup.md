@@ -40,8 +40,8 @@ Install `git-crypt`:
 ```
 
 This registers the `Stop` and `SessionStart` hooks and the single `/journal`
-command (`setup`, `schedule`, `accept`/`skip`/`edit`). The hooks do nothing
-useful until you create a data repo and name the device (steps 2–3).
+command (`setup`, `schedule`, `consolidate`, `accept`/`skip`/`edit`). The hooks
+do nothing useful until you create a data repo and name the device (steps 2–3).
 
 ## Step 2 — Bootstrap the data repo (first device only)
 
@@ -152,6 +152,14 @@ Manage it later with:
 claude -p --bare "/schedule list"
 claude -p --bare "/schedule update journal-consolidator"
 ```
+
+> **Don't want to wait for the nightly run?** Run `/journal consolidate` on any
+> device to distill the not-yet-consolidated breadcrumbs right now (it flushes
+> the current session first, so it's included). It runs the same distillation
+> locally and is idempotent with the nightly routine, so the two never collide.
+> See the [reference](reference.md#skills). This complements the routine; it
+> does not replace it — the nightly run is still what consolidates days you
+> didn't open a session on a given device.
 
 > After scheduling, enable **"Allow unrestricted branch pushes"** on the data
 > repo so the routine can commit to `main` — otherwise devices won't see its

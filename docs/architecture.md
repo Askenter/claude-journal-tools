@@ -122,6 +122,24 @@ This is the only place LLM judgment enters the pipeline, and it runs **once for
 your whole account**, not once per device — so there's a single, coherent view
 across machines.
 
+#### On-demand consolidation (`/journal consolidate`)
+
+The same distillation has a second entry point for when you don't want to wait
+for the nightly run. `/journal consolidate` runs Tracks 0–3 **locally, in the
+current session**, against the already-unlocked clone, driven by the data repo's
+own `consolidator/ROUTINE.md` (so local and cloud stay identical — no forked
+rules). It differs from the cloud run in only two ways: there's no clone/key/token
+step (the local repo is already unlocked), and it pushes with the device's normal
+`git push`. Before distilling, it **flushes the current session** into `raw/`
+using the same `capture.py` the `Stop` hook uses, so the session you're sitting in
+is included; that session id is recorded in a device-local flushed ledger
+(`~/.claude/journal/flushed-sessions`) so the later `Stop` hook **doesn't write it
+a second time**. The date set is auto-detected (today + yesterday always, plus any
+date in a 14-day lookback whose digests are missing), and every write is the same
+idempotent upsert, so on-demand and nightly runs refresh rather than duplicate.
+See `tools/journal/consolidate.py` and the
+[on-demand consolidation spec](superpowers/specs/2026-06-09-on-demand-consolidation-design.md).
+
 ### Phase 3 — Propagate (on each device, no LLM)
 
 Triggered by Claude Code's **`SessionStart`** event. The
