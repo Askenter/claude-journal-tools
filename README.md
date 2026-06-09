@@ -54,12 +54,8 @@ claude-journal-tools/
 
 Skills shipped under `skills/`:
 
-- `journal/` — one command, several actions (the flows live in `journal/references/`):
-  - `/journal setup` — guided first-time bootstrap of your data repo
-  - `/journal schedule` — create/update the nightly Phase 2 consolidator routine via `/schedule`
-  - `/journal consolidate [date]` — run Phase 2 distillation now, locally, including the current session, instead of waiting for the nightly routine
-  - `/journal recall <question>` — answer from the journal (e.g. "what did I do yesterday" from digests, "what do I know about X" from memories)
-  - `/journal accept|skip|edit` — resolve pending consolidation proposals
+- `journal/` — one skill, several `/journal` actions (per-action flows live in
+  `journal/references/`). See [Commands](#commands) for the full list.
 
 Runtime is **Python 3.11+, standard library only** — no `pip install`, no
 `node_modules`. The hooks run under whatever `python3` is on your `PATH`.
@@ -89,9 +85,28 @@ Install git-crypt:
 ```
 
 That registers the `Stop` and `SessionStart` hooks and the single `/journal`
-command (`setup`, `schedule`, `consolidate`, `recall`, `accept`/`skip`/`edit`). The hooks won't do
-anything useful until you create a data repo and name the device — the two
-one-time steps below.
+command (see [Commands](#commands)). The hooks won't do anything useful until you
+create a data repo and name the device — the two one-time steps below.
+
+## Commands
+
+The plugin ships one skill, `journal`, exposed as the `/journal` slash command.
+It dispatches on the first word; each action's full flow lives under
+`skills/journal/references/`.
+
+| Command | What it does |
+| --- | --- |
+| `/journal setup` | First-time, first-machine bootstrap of your private `claude-journal` data repo — tools check, git identity, `gh` sign-in, the cloud routine's GitHub token, then the bootstrap. Run once, ever. |
+| `/journal schedule` | Create or update the once-per-account nightly **consolidator** routine via Claude Code's `/schedule`. Asks cadence (1+ runs/day), picks a DST-safe time, confirms first. |
+| `/journal consolidate [date]` | Run the Phase 2 distillation **now**, locally, against the not-yet-consolidated dates (or one explicit `YYYY-MM-DD`). Flushes the current session first so it's included, then commits and pushes. |
+| `/journal recall <question>` | Answer **from the journal**. Time questions (`what did I do yesterday`) come from `digests/`; topic questions (`what do I know about X`) come from `memories/`. Reads distilled outputs only, never `raw/`, and offers `/journal consolidate` for any day not yet distilled. |
+| `/journal accept` · `skip` · `edit` | Resolve the pending proposals (new skills, feedback memories, CLAUDE.md edits) the consolidator surfaced for the current project at SessionStart. |
+| `/journal` (no action) | Print the action list and stop. |
+
+Beyond this one shipped skill, the pipeline can **propose new skills** of its
+own: when the consolidator spots a reusable technique it writes a proposal, and
+`/journal accept` installs it into your data repo's `skills/` tree and syncs it
+to every device. Those distilled skills are yours, not shipped in this repo.
 
 ## Create your data repo (once, ever — first device only)
 

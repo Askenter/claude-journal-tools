@@ -9,6 +9,16 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.7.1] — 2026-06-09
+
+### Documentation
+- **README: a clean `Commands` section.** Added a single table of every
+  `/journal` action (`setup`, `schedule`, `consolidate`, `recall`,
+  `accept`/`skip`/`edit`, and bare `/journal`), with a note on the one shipped
+  skill versus the skills the consolidator proposes. Slimmed the duplicated
+  action bullets in the Layout section down to a pointer, so the command list
+  now lives in one place.
+
 ## [0.7.0] — 2026-06-09
 
 ### Added
