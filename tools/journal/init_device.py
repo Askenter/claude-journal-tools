@@ -30,6 +30,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tools.journal.autoupdate import enable_marketplace_autoupdate
+
 
 def _hook_command(python_bin: Path, hook_path: Path) -> str:
     """Compose the shell command Claude Code will run for a hook.
@@ -107,6 +109,35 @@ def _write_device_name(device: str) -> None:
     p.write_text(device + "\n")
 
 
+def _confirm_autoupdate() -> bool:
+    """Offer plugin auto-update with a default of yes. Prompt only when stdin
+    is interactive; default yes when run non-interactively (e.g. driven by
+    Claude) so it never blocks waiting on input."""
+    try:
+        if sys.stdin.isatty():
+            ans = input(
+                "[init] Enable plugin auto-update for claude-journal-tools so new "
+                "releases reach this device automatically? [Y/n] "
+            ).strip().lower()
+            return ans in ("", "y", "yes")
+    except (EOFError, OSError):
+        pass
+    return True
+
+
+def _maybe_enable_autoupdate(no_autoupdate: bool) -> None:
+    """Per-device step: offer to enable plugin marketplace auto-update so this
+    device picks up new releases without a manual update."""
+    if no_autoupdate:
+        print("[init] left plugin auto-update unchanged (--no-autoupdate).")
+        return
+    if not _confirm_autoupdate():
+        print("[init] left plugin auto-update unchanged.")
+        return
+    _, message = enable_marketplace_autoupdate()
+    print(f"[init] {message}")
+
+
 def _symlink(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if dst.is_symlink() or dst.exists():
@@ -141,6 +172,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Manual (non-plugin) install: symlink hook entrypoints and the "
         "journal skill into ~/.claude/ and register them in settings.json. "
         "Do NOT use this if you installed the Claude Code plugin.",
+    )
+    parser.add_argument(
+        "--no-autoupdate",
+        action="store_true",
+        help="Don't offer/enable plugin marketplace auto-update for this device.",
     )
     args = parser.parse_args(argv)
 
@@ -182,6 +218,8 @@ def main(argv: list[str] | None = None) -> int:
             "[init] skipping hook registration — the Claude Code plugin "
             "provides them. Re-run with --register-hooks for a manual install."
         )
+
+    _maybe_enable_autoupdate(args.no_autoupdate)
 
     print(f"journal device '{args.device}' initialized.")
     return 0

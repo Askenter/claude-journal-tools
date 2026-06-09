@@ -46,7 +46,7 @@ claude-journal-tools/
 │   └── marketplace.json   marketplace entry for /plugin install
 ├── hooks/hooks.json       declarative Stop + SessionStart hook wiring
 ├── tools/journal/         hook implementation, breadcrumb model, push/pull, init
-├── tests/journal/         pytest suite (stdlib only, 168 tests across 17 files)
+├── tests/journal/         pytest suite (stdlib only, 180 tests across 18 files)
 ├── scripts/               bootstrap-journal-repo.sh + init-journal-device.sh (data-repo setup)
 ├── skills/                the /journal slash-command skill (see below)
 └── docs/                  design specs, phase plans, architecture + reference guides
@@ -298,9 +298,12 @@ the installed plugin:
 /plugin update claude-journal@claude-journal-tools
 ```
 
-Prefer hands-off? Enable auto-update once — `/plugin` → **Marketplaces** →
-`claude-journal-tools` → **Enable auto-update** (third-party marketplaces have it
-**off by default**). `/journal setup` also offers to turn this on during setup.
+Prefer hands-off? Third-party marketplaces have auto-update **off by default**,
+so the setup offers to turn it on for you — `/journal setup` (first machine) and
+`init_device.py` (every device, pass `--no-autoupdate` to skip) both offer to
+enable it, writing `extraKnownMarketplaces.<name>.autoUpdate = true` into that
+device's `~/.claude/settings.json`. You can also toggle it by hand any time via
+`/plugin` → **Marketplaces** → `claude-journal-tools` → **Enable auto-update**.
 
 > New releases only appear when the **version** is bumped in
 > `.claude-plugin/plugin.json` — pushing commits without a version bump is not

@@ -98,7 +98,8 @@ python3 tools/journal/init_device.py <device-name> --register-hooks   # manual (
 | `sync_skills.py` | mirror accepted `skills/` → device skills trees |
 | `surface_proposals.py` | build the SessionStart proposal-context block |
 | `bootstrap.py` | create a new data repo (first device) |
-| `init_device.py` | per-device clone + unlock + name (+ optional hook registration) |
+| `init_device.py` | per-device clone + unlock + name (+ optional hook registration; offers plugin auto-update) |
+| `autoupdate.py` | enable plugin marketplace auto-update declaratively in `settings.json` (used by `/journal setup` and `init_device.py`) |
 
 ## Data formats
 

@@ -201,32 +201,30 @@ come from a `git pull` of their checkout, not plugin auto-update.)
 Third-party marketplaces have auto-update **off by default**, so new releases
 won't reach the user unless they update by hand. Offer to fix that:
 
-1. Find the journal marketplace's registered name — the key in
-   `~/.claude/plugins/known_marketplaces.json` whose `source.repo` ends in
-   `/claude-journal-tools` (fall back to `claude-journal-tools`).
-2. Check `~/.claude/settings.json` for
-   `extraKnownMarketplaces.<name>.autoUpdate`. If it is already `true`, tell the
-   user auto-update is on and move on.
-3. Otherwise ask whether they want hands-off auto-updates. If yes, **merge**
-   this into `~/.claude/settings.json` — preserve every existing key; only add
-   or extend `extraKnownMarketplaces`:
+1. Ask whether they want hands-off auto-updates (default **yes**).
+2. If yes, run the helper — it finds the marketplace's registered name and
+   source in `~/.claude/plugins/known_marketplaces.json`, then **merges**
+   `extraKnownMarketplaces.<name>.autoUpdate = true` into
+   `~/.claude/settings.json`, preserving every existing key (idempotent — safe
+   to re-run):
 
-   ```json
-   "extraKnownMarketplaces": {
-     "<name>": {
-       "source": { "source": "github", "repo": "<owner>/claude-journal-tools" },
-       "autoUpdate": true
-     }
-   }
+   ```bash
+   python3 "$TOOLS/tools/journal/autoupdate.py"
    ```
 
-   Use the exact registered `<name>` from step 1 so it merges with the existing
-   registration instead of creating a duplicate; substitute the real `<owner>`.
-4. If they decline the settings edit, give them the manual alternative: `/plugin`
-   → **Marketplaces** → `<name>` → **Enable auto-update**.
+   Report its one-line output verbatim. It tells you whether it enabled
+   auto-update, that it was already on, or that this is a **manual/symlink
+   install** (no marketplace registered — in that case updates come from a
+   `git pull` of the checkout, not plugin auto-update).
+3. If they decline, give them the manual alternative: `/plugin` →
+   **Marketplaces** → the journal marketplace → **Enable auto-update**.
 
 Either way, remind them updates only arrive when a new **version** is published
 (the maintainer bumps `version` in the plugin manifest per release).
+
+> The same helper runs per device during `init_device.py` (Step 8), so every
+> machine you add is offered auto-update too — pass `--no-autoupdate` to skip it
+> there.
 
 ## Step 8 — Point at next steps
 
@@ -235,7 +233,9 @@ Once verified, tell the user the two remaining steps (do not run them here):
 1. **Add devices.** On *every* device (including this one), set
    `CLAUDE_JOURNAL_REPO_URL` and run
    `tools/journal/init_device.py <device-name>`. Additional devices need the
-   git-crypt key placed first, out-of-band (see README).
+   git-crypt key placed first, out-of-band (see README). That script also
+   offers to enable plugin auto-update for the device (default yes; pass
+   `--no-autoupdate` to skip), so each machine picks up new releases on its own.
 2. **Create the consolidator routine, once per account**, with
    `/journal schedule`. It asks **how many times a day** to run — default is
    once (nightly); pick more only if you want distilled output to reach your

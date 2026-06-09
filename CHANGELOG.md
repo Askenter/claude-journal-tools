@@ -9,6 +9,25 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.6.1] — 2026-06-09
+
+### Added
+- **Setup enables plugin auto-update, on every device.** A new tested helper
+  (`tools/journal/autoupdate.py`) declares the journal marketplace with
+  `autoUpdate: true` in that device's `~/.claude/settings.json`, reading the
+  marketplace's registered name and source from `known_marketplaces.json` (so
+  the owner is never hardcoded), merging idempotently and preserving every other
+  setting. `init_device.py` now offers it on each device it onboards (default
+  yes; `--no-autoupdate` to skip), so new releases reach every machine without a
+  manual `/plugin update`.
+
+### Changed
+- **`/journal setup` Step 7 runs the helper instead of hand-editing JSON.**
+  Claude still offers auto-update, but now applies it with one tested command
+  rather than merging `extraKnownMarketplaces` by hand — more reliable and
+  idempotent, and it reports cleanly when the install is a manual/symlink one
+  (where plugin auto-update doesn't apply).
+
 ## [0.6.0] — 2026-06-09
 
 ### Added

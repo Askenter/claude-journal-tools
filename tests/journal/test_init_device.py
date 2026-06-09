@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
+from tools.journal import init_device
 from tools.journal.init_device import _hook_command, attempt_unlock, register_hooks_in_settings
 
 
@@ -98,6 +99,34 @@ def test_attempt_unlock_warns_when_git_crypt_fails(tmp_path, monkeypatch):
     msg = attempt_unlock(journal, keyfile)
     assert "WARNING" in msg
     assert "bad key" in msg
+
+
+def test_maybe_enable_autoupdate_enables_by_default(monkeypatch):
+    spy = MagicMock(return_value=(True, "enabled"))
+    monkeypatch.setattr(init_device, "enable_marketplace_autoupdate", spy)
+    monkeypatch.setattr(init_device, "_confirm_autoupdate", lambda: True)
+    init_device._maybe_enable_autoupdate(False)
+    spy.assert_called_once()
+
+
+def test_maybe_enable_autoupdate_respects_opt_out(monkeypatch):
+    spy = MagicMock(return_value=(True, "enabled"))
+    monkeypatch.setattr(init_device, "enable_marketplace_autoupdate", spy)
+    init_device._maybe_enable_autoupdate(True)
+    spy.assert_not_called()
+
+
+def test_maybe_enable_autoupdate_skips_when_declined(monkeypatch):
+    spy = MagicMock(return_value=(True, "enabled"))
+    monkeypatch.setattr(init_device, "enable_marketplace_autoupdate", spy)
+    monkeypatch.setattr(init_device, "_confirm_autoupdate", lambda: False)
+    init_device._maybe_enable_autoupdate(False)
+    spy.assert_not_called()
+
+
+def test_confirm_autoupdate_defaults_yes_when_non_interactive(monkeypatch):
+    monkeypatch.setattr(init_device.sys.stdin, "isatty", lambda: False)
+    assert init_device._confirm_autoupdate() is True
 
 
 def test_register_hooks_creates_session_start_when_only_stop_exists(tmp_path):
