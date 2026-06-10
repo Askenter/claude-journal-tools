@@ -9,6 +9,31 @@ project aims to follow [Semantic Versioning](https://semver.org/). The
 `version` field in `.claude-plugin/plugin.json` is the release marker — bump it
 on every release or installed plugins won't see the change.
 
+## [0.7.2] — 2026-06-10
+
+### Security
+- **The breadcrumb's `first_prompt` is now pattern-scrubbed.** It was
+  truncated but never redacted — a credential pasted as the first message of
+  a session landed in `raw/` verbatim (still git-crypt ciphertext at rest, but
+  skipping the documented redaction layer). `extract.py` now runs the first
+  user message through the shared scrubber **before** the 200-char truncation,
+  so a key cut at the length budget can't slip through as a fragment too short
+  to match any pattern. SECURITY.md updated to drop the old disclosure of this
+  gap.
+
+### Fixed
+- **Manual-install hardening in `init_device.py`.** Hook commands registered
+  in `settings.json` are now shell-quoted, so a checkout under a directory
+  with spaces no longer produces a command that splits and breaks (proven by a
+  test that composes the command from spaced paths and executes it through a
+  real shell). `register_hooks_in_settings` refuses an invalid `settings.json`
+  with a clear message instead of a raw traceback, leaves the broken file
+  untouched, and writes through a same-directory temp file + `os.replace` so a
+  crash mid-write can never truncate your settings. `_symlink` still replaces
+  symlinks and files, but a *real* user-created directory at the destination
+  now gets an actionable refusal instead of a bare
+  `IsADirectoryError`/`PermissionError`.
+
 ## [0.7.1] — 2026-06-09
 
 ### Documentation
