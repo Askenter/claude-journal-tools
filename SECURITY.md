@@ -26,7 +26,9 @@ Secrets are kept out of the journal by **three layers**, strongest first:
    before anything is written (`transcript.py`).
 2. **Pattern redaction over the remaining prose.** A shared scrubber
    (`tools/journal/redaction.py`) replaces known key shapes with `[REDACTED]`
-   in both transcripts and the captured `CLAUDE.md` snapshots: Anthropic/OpenAI
+   in transcripts, the captured `CLAUDE.md` snapshots, and the breadcrumb's
+   `first_prompt` field (scrubbed before truncation, so a key cut at the
+   length budget can't slip through as an unmatchable fragment): Anthropic/OpenAI
    `sk-…`, Stripe `sk_/rk_…`, the GitHub token family (`ghp_/gho_/ghu_/ghs_/ghr_`
    and `github_pat_`), Google `AIza…` and `GOCSPX-…`, AWS access-key ids and
    labelled secret keys, Slack tokens and webhook URLs, `Authorization: Bearer`
@@ -37,8 +39,7 @@ Secrets are kept out of the journal by **three layers**, strongest first:
    that slips past layers 1–2 is ciphertext on your git host.
 
 **This is defense-in-depth, not a guarantee.** Layer 2 is pattern-based: it
-matches *known* secret formats and will miss novel or unusual ones, and the
-breadcrumb's `first_prompt` field is truncated but not pattern-scrubbed. The
+matches *known* secret formats and will miss novel or unusual ones. The
 load-bearing protection is layer 3 — keep the data repo **private and
 git-crypt-encrypted** and the git-crypt key off the repo. Don't rely on
 redaction alone, and don't paste a credential you couldn't tolerate sitting

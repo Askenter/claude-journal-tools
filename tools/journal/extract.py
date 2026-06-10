@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from tools.journal.breadcrumb import _FIRST_PROMPT_MAX
+from tools.journal.redaction import redact as _redact
 
 _TOOLS_THAT_TOUCH_FILES = {"Edit", "Write", "NotebookEdit"}
 
@@ -67,7 +68,10 @@ def extract_structural(
             if event.get("type") == "user" and not first_prompt:
                 content = event.get("message", {}).get("content", "")
                 if isinstance(content, str):
-                    first_prompt = content[:_FIRST_PROMPT_MAX]
+                    # Redact BEFORE truncating: a key cut at the 200-char
+                    # boundary would be too short to match any pattern and
+                    # leak a partial secret into the breadcrumb.
+                    first_prompt = _redact(content)[:_FIRST_PROMPT_MAX]
 
             if event.get("type") == "assistant":
                 content = event.get("message", {}).get("content", [])
