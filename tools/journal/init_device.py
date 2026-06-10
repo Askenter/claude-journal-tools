@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -38,8 +39,10 @@ def _hook_command(python_bin: Path, hook_path: Path) -> str:
 
     Uses an explicit python interpreter so the hook isn't required to be
     executable or have a shebang, and so it always runs against the project's
-    venv."""
-    return f"{python_bin} {hook_path}"
+    venv. Both paths are shell-quoted — Claude Code runs the command through
+    a shell, so a checkout under a directory with spaces would otherwise
+    split into a broken command."""
+    return f"{shlex.quote(str(python_bin))} {shlex.quote(str(hook_path))}"
 
 
 def register_hooks_in_settings(
@@ -51,9 +54,18 @@ def register_hooks_in_settings(
     """Insert the journal hooks into Claude Code's settings.json idempotently.
 
     Preserves any unrelated content (other settings keys, other hooks).
+    Refuses (without touching the file) when settings.json is invalid JSON,
+    and writes via a same-directory temp file + os.replace so a crash
+    mid-write can never leave a truncated settings.json behind.
     """
     if settings_path.exists():
-        data = json.loads(settings_path.read_text())
+        try:
+            data = json.loads(settings_path.read_text())
+        except json.JSONDecodeError as exc:
+            raise SystemExit(
+                f"{settings_path} is not valid JSON ({exc}) — refusing to "
+                f"overwrite it. Fix the file and re-run."
+            )
     else:
         data = {}
     settings_path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,7 +82,9 @@ def register_hooks_in_settings(
             {"type": "command", "command": command}
         )
 
-    settings_path.write_text(json.dumps(data, indent=2) + "\n")
+    tmp = settings_path.parent / (settings_path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n")
+    os.replace(tmp, settings_path)
 
 
 def _ensure_journal_clone(repo_url: str, target: Path) -> None:
@@ -140,8 +154,16 @@ def _maybe_enable_autoupdate(no_autoupdate: bool) -> None:
 
 def _symlink(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.is_symlink() or dst.exists():
+    # is_symlink first: a symlink (even to a directory, even dangling) is
+    # ours to replace. A REAL directory is user content — refuse rather than
+    # delete it (matching bootstrap's refuse-to-clobber convention).
+    if dst.is_symlink() or dst.is_file():
         dst.unlink()
+    elif dst.is_dir():
+        raise SystemExit(
+            f"{dst} is a real directory, not a symlink — refusing to replace "
+            f"it. Move it aside and re-run."
+        )
     dst.symlink_to(src)
 
 
