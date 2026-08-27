@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from tools.journal.sync_memories import (
     sync_project_memories,
@@ -65,6 +66,37 @@ def test_sync_skips_feedback_memories(tmp_path: Path):
     assert (device_dir / "deployment.md").exists()
     assert not (device_dir / "no-mocks.md").exists()
     assert result.skipped_feedback == ["no-mocks.md"]
+
+
+def test_sync_omits_index_entries_for_skipped_feedback_memories(tmp_path: Path):
+    """An index line for a feedback memory would dangle on every device.
+
+    The file itself is deliberately never mirrored, so appending its index
+    entry points readers at a file that will never arrive — on every machine
+    except the one that authored it.
+    """
+    journal_dir = tmp_path / "journal" / "memories" / "p"
+    device_dir = tmp_path / "device" / "memory"
+    _write_memory(journal_dir, "no-mocks.md", mem_type="feedback")
+    _write_memory(journal_dir, "deployment.md", mem_type="project")
+    _write_index(journal_dir, "p", [
+        "- [No mocks](no-mocks.md) — behavioural guidance",
+        "- [Deployment](deployment.md) — split-node arch",
+    ])
+
+    result = sync_project_memories(
+        journal_project_dir=journal_dir,
+        device_project_memory_dir=device_dir,
+        project="p",
+    )
+
+    index = (device_dir / "MEMORY.md").read_text()
+    assert "deployment.md" in index
+    assert "no-mocks.md" not in index
+    assert result.appended_index_lines == 1
+    # Every link in the device index must resolve to a file on the device.
+    for target in re.findall(r"\]\(([^)]+)\)", index):
+        assert (device_dir / target).exists(), f"dangling index link: {target}"
 
 
 def test_sync_preserves_existing_device_memory_index_entries(tmp_path: Path):

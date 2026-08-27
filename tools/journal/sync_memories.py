@@ -153,6 +153,10 @@ def sync_project_memories(
     if journal_index.exists():
         device_text = device_index.read_text(encoding="utf-8")
         already = _entries_in_index(device_text)
+        # Feedback memories are deliberately never mirrored (see the loop
+        # above), so appending their index entries would point every other
+        # device at a file that never arrives.
+        feedback_targets = set(skipped_feedback)
         new_entries: list[str] = []
         for line in _journal_index_lines(_read_or_empty(journal_index)):
             # Dedupe on the link TARGET (the `](target)` part), matching how
@@ -165,6 +169,8 @@ def sync_project_memories(
                 continue
             filename = match.group(1)
             if filename in already or filename == "MEMORY.md":
+                continue
+            if filename in feedback_targets:
                 continue
             new_entries.append(line)
             already.add(filename)
